@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.mlab as mlab
 from scipy import signal
+np.set_printoptions(threshold=np.inf)
 
 class EEGrunt:
     def __init__(self, path, filename, source, title = ""):
@@ -100,14 +101,14 @@ class EEGrunt:
                           usecols=cols
                           )
 
-
+        
         self.raw_data = raw_data
 	
 
         self.t_sec = np.arange(len(self.raw_data[:, 0])) /self.fs_Hz
 
         print "Session length (seconds): "+str(len(self.t_sec)/self.fs_Hz)
-        print "t_sec last: "+str(self.t_sec[:-1])
+        #print "t_sec last: "+str(self.t_sec[:-1])
 
 
 
@@ -116,7 +117,7 @@ class EEGrunt:
         channel_data = self.raw_data[:,(channel+self.col_offset)]
         self.channel = channel
         self.data = channel_data
-
+        #print(channel_data)
     def trim_data(self, start, end):
         # Trim data off the beginning and end to get rid of unwanted
         # artifacts (such as from applying and removing electrodes).
@@ -151,6 +152,9 @@ class EEGrunt:
         print("Highpass filtering at: " + str(hp_cutoff_Hz) + " Hz")
 
         b, a = signal.butter(2, hp_cutoff_Hz/(self.fs_Hz / 2.0), 'highpass')
+        print(b)
+        print(a)
+        print(self.data)
         self.data = signal.lfilter(b, a, self.data, 0)
 
 

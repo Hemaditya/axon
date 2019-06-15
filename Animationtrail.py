@@ -11,8 +11,8 @@ xs = []
 ys = []
 
 def animate(i):
-	graph_data = open('example.txt','r').read()
-	lines = graph_data.split('\n')
+	#graph_data = open('example.txt','r').read()
+	# lines = graph_data.split('\n')
 	xs.append(i)
 	ys.append(psutil.cpu_percent())
 	ax1.plot(xs,ys)

@@ -50,7 +50,7 @@ def bandpass(start,stop):
 	b, a = signal.butter(3, bp_Hz/(fs_Hz / 2.0),'bandpass')
 	filtered = signal.lfilter(b, a, raw_data, 0)
 
-board = OpenBCICyton(port='/dev/ttyUSB0', daisy=False)
+board = OpenBCICyton(port='/dev/ttyUSB', daisy=False)
 
 board.start_stream(process_raw)
 
