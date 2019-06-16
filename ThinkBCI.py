@@ -54,6 +54,13 @@ class ThinkBCI:
         
         self.hrv_window_length = 10
 
+        self.counter = 0
+
+        self.fig = plt.figure()
+
+        self.ax = self.fig.add_subplot(1,1,1)
+
+        self.fig.show()
 
 
 
@@ -107,18 +114,19 @@ class ThinkBCI:
         self.chunk = chunk
 	
 
-        self.t_sec = np.arange(len(self.chunk[:, 0])) /self.fs_Hz
+        # self.t_sec = np.arange(len(self.chunk[:, 0])) /self.fs_Hz
 
-        print "Session length (seconds): "+str(len(self.t_sec)/self.fs_Hz)
-        print "t_sec last: "+str(self.t_sec[:-1])
+        # print "Session length (seconds): "+str(len(self.t_sec)/self.fs_Hz)
+        # print "t_sec last: "+str(self.t_sec[:-1])
 
 
 
     def load_channel(self,channel):
-        print("Loading channel: "+str(channel))
-        channel_data = self.raw_data[:,(channel+self.col_offset)]
+        # print("Loading channel: "+str(channel))
+        channel_data = self.chunk[:,(channel)]
         self.channel = channel
         self.data = channel_data
+        # print(channel_data)
 
     def trim_data(self, start, end):
         # Trim data off the beginning and end to get rid of unwanted
@@ -151,19 +159,19 @@ class ThinkBCI:
     def remove_dc_offset(self):
         hp_cutoff_Hz = 1.0
 
-        print("Highpass filtering at: " + str(hp_cutoff_Hz) + " Hz")
+        # print("Highpass filtering at: " + str(hp_cutoff_Hz) + " Hz")
 
-        b, a = signal.butter(2, hp_cutoff_Hz/(self.fs_Hz / 2.0), 'highpass')
+        b, a = signal.butter(2, hp_cutoff_Hz/(self.fs_Hz / 1.0), 'highpass')
         self.data = signal.lfilter(b, a, self.data, 0)
 
 
     def notch_mains_interference(self):
-        notch_freq_Hz = np.array([60.0])  # main + harmonic frequencies
+        notch_freq_Hz = np.array([50.0])  # main + harmonic frequencies
         for freq_Hz in np.nditer(notch_freq_Hz):  # loop over each target freq
             bp_stop_Hz = freq_Hz + 3.0*np.array([-1, 1])  # set the stop band
             b, a = signal.butter(3, bp_stop_Hz/(self.fs_Hz / 2.0), 'bandstop')
             self.data = signal.lfilter(b, a, self.data, 0)
-            print("Notch filter removing: " + str(bp_stop_Hz[0]) + "-" + str(bp_stop_Hz[1]) + " Hz")
+            # print("Notch filter removing: " + str(bp_stop_Hz[0]) + "-" + str(bp_stop_Hz[1]) + " Hz")
 
     def bandpass(self,start,stop):
         bp_Hz = np.zeros(0)
@@ -199,18 +207,24 @@ class ThinkBCI:
 
     def showplots(self):
         if self.plot == 'show':
-            print("Computation complete! Showing generated plots...")
-            plt.show()
+
+            plt.show(block=False)
+
 
     def signalplot(self):
-        print("Generating signal plot...")
-        plt.figure(figsize=(10,5))
-        plt.subplot(1,1,1)
-        plt.plot(self.t_sec,self.data)
-        plt.xlabel('Time (sec)')
-        plt.ylabel('Power (uV)')
-        plt.title(self.plot_title('Signal'))
-        self.plotit(plt)
+        # print("Generating signal plot...")
+        
+        # plt.xlabel('Time (sec)')
+        # plt.ylabel('Power (uV)')
+        print(self.data)
+        xaxis=np.arange(self.counter,self.counter+4,0.004)
+        self.ax.plot(xaxis,self.data,color='b')
+        self.fig.canvas.draw()
+        self.ax.set_xlim(left=max(0, self.counter-10), right=self.counter+1)
+        self.counter+= 4
+        # self.ax.set_ylim(-50000,-25000)
+        # plt.title(self.plot_title('Signal'))
+        # self.plotit(plt)
 
     def get_spectrum_data(self):
         print("Calculating spectrum data...")
