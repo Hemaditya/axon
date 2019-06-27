@@ -37,10 +37,12 @@ def plot2(x,y):
 def print_raw(sample):
 	global i
 	print(sample.channels_data) #* (4.5)/24/(2**23-1))
-	#plot1(i,(sample.channels_data[0] * ((4.5)/24/(2**23-1))))
-	#plot2(i,(sample.channels_data[1] * ((4.5)/24/(2**23-1))))
+	plot1(i,(sample.channels_data[0] * ((4.5)/24/(2**23-1))))
+	plot2(i,(sample.channels_data[1] * ((4.5)/24/(2**23-1))))
 	i += 1
 
-board = OpenBCICyton(port='/dev/ttyUSB3', daisy=False)
+board = OpenBCICyton(port='/dev/ttyUSB1', daisy=False)
 
-board.start_stream(print_raw)
+def save_raw
+
+board.start_stream(save_raw)

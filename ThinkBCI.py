@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.mlab as mlab
 from scipy import signal
+import pyqtgraph as pg
 
 class ThinkBCI:
     def __init__(self):
@@ -37,8 +38,18 @@ class ThinkBCI:
         #         self.channels = [1,2,3,4,5,6,7,8]
         
         self.fs_Hz = 250.0
+
+	self.ptr = 0
+
+	self.dcounter = 0
+
+	self.dprevious_data = []
+
+	self.dwindow_size = 500
         
         self.nchannels = 8
+
+	self.n_shift = 100
         
         self.channels = [1,2,3,4,5,6,7,8]
 
@@ -61,6 +72,12 @@ class ThinkBCI:
         self.ax = self.fig.add_subplot(1,1,1)
 
         self.fig.show()
+
+	self.data1 = []
+
+	#self.win = pg.GraphicsWindow('channel')
+	#self.p1 = self.win.addPlot(title='Channel-1')
+	#self.curve = self.p1.plot(pen='y')
 
 
 
@@ -153,7 +170,7 @@ class ThinkBCI:
         data_indices = self.data[:, 0]
         d_indices = data_indices[2:]-data_indices[1:-1]
         n_jump = np.count_nonzero((d_indices != 1) & (d_indices != -255))
-        print("Packet counter discontinuities: " + str(n_jump))
+        #print("Packet counter discontinuities: " + str(n_jump))
         self.n_jump  = n_jump
 
     def remove_dc_offset(self):
@@ -163,6 +180,14 @@ class ThinkBCI:
 
         b, a = signal.butter(2, hp_cutoff_Hz/(self.fs_Hz / 1.0), 'highpass')
         self.data = signal.lfilter(b, a, self.data, 0)
+		if(self.dcounter == 0):
+			self.dprevious_data = self.data[self.n_shift:]
+			self.data1 = self.data 
+			self.dcounter = 1
+		else:
+			self.data1 = np.concatenate((self.dprevious_data, self.data[self.dwindow_size-self.n_shift:]),axis=0)
+			#self.data = data1
+				# print("Notch filter removing: " + str(bp_stop_Hz[0]) + "-" + str(bp_stop_Hz[1]) + " Hz")
 
 
     def notch_mains_interference(self):
@@ -171,7 +196,12 @@ class ThinkBCI:
             bp_stop_Hz = freq_Hz + 3.0*np.array([-1, 1])  # set the stop band
             b, a = signal.butter(3, bp_stop_Hz/(self.fs_Hz / 2.0), 'bandstop')
             self.data = signal.lfilter(b, a, self.data, 0)
-            # print("Notch filter removing: " + str(bp_stop_Hz[0]) + "-" + str(bp_stop_Hz[1]) + " Hz")
+			if(self.dcounter == 0):
+				self.dprevious_data = self.data[self.n_shift:]
+				self.dcounter = 1
+			else:
+				self.data = np.concatenate((self.dprevious_data, self.data[self.dwindow_size-self.n_shift:]),axis=0)
+				# print("Notch filter removing: " + str(bp_stop_Hz[0]) + "-" + str(bp_stop_Hz[1]) + " Hz")
 
     def bandpass(self,start,stop):
         bp_Hz = np.zeros(0)
@@ -210,21 +240,32 @@ class ThinkBCI:
 
             plt.show(block=False)
 
+	
+
+	def pyqtplot(self):
+		self.curve.set_data(self.data)
+			
 
     def signalplot(self):
+		#self.ptr += 1
+		#self.curve.setData(self.data)
+		#self.curve.setPos(self.ptr,0)
+		#
+		#print(self.data.shape)
         # print("Generating signal plot...")
         
         # plt.xlabel('Time (sec)')
         # plt.ylabel('Power (uV)')
-        print(self.data)
-        xaxis=np.arange(self.counter,self.counter+4,0.004)
-        self.ax.plot(xaxis,self.data,color='b')
+        #print(self.data)
+	
+        xaxis=np.arange(self.counter,self.counter+2,0.004)
+        self.ax.plot(xaxis,self.data1,color='b')
         self.fig.canvas.draw()
         self.ax.set_xlim(left=max(0, self.counter-10), right=self.counter+1)
         self.counter+= 4
-        # self.ax.set_ylim(-50000,-25000)
-        # plt.title(self.plot_title('Signal'))
-        # self.plotit(plt)
+        #self.ax.set_ylim(-50000,-25000)
+        #plt.title(self.plot_title('Signal'))
+        self.plotit(plt)
 
     def get_spectrum_data(self):
         print("Calculating spectrum data...")
