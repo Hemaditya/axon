@@ -180,14 +180,14 @@ class ThinkBCI:
 
         b, a = signal.butter(2, hp_cutoff_Hz/(self.fs_Hz / 1.0), 'highpass')
         self.data = signal.lfilter(b, a, self.data, 0)
-		if(self.dcounter == 0):
-			self.dprevious_data = self.data[self.n_shift:]
-			self.data1 = self.data 
-			self.dcounter = 1
-		else:
-			self.data1 = np.concatenate((self.dprevious_data, self.data[self.dwindow_size-self.n_shift:]),axis=0)
-			#self.data = data1
-				# print("Notch filter removing: " + str(bp_stop_Hz[0]) + "-" + str(bp_stop_Hz[1]) + " Hz")
+		# if(self.dcounter == 0):
+		#   self.dprevious_data = self.data[self.n_shift:]
+		# 	self.data1 = self.data 
+		# 	self.dcounter = 1
+		# else:
+		# 	self.data1 = np.concatenate((self.dprevious_data, self.data[self.dwindow_size-self.n_shift:]),axis=0)
+		# 	#self.data = data1
+		# 		# print("Notch filter removing: " + str(bp_stop_Hz[0]) + "-" + str(bp_stop_Hz[1]) + " Hz")
 
 
     def notch_mains_interference(self):
@@ -196,12 +196,12 @@ class ThinkBCI:
             bp_stop_Hz = freq_Hz + 3.0*np.array([-1, 1])  # set the stop band
             b, a = signal.butter(3, bp_stop_Hz/(self.fs_Hz / 2.0), 'bandstop')
             self.data = signal.lfilter(b, a, self.data, 0)
-			if(self.dcounter == 0):
-				self.dprevious_data = self.data[self.n_shift:]
-				self.dcounter = 1
-			else:
-				self.data = np.concatenate((self.dprevious_data, self.data[self.dwindow_size-self.n_shift:]),axis=0)
-				# print("Notch filter removing: " + str(bp_stop_Hz[0]) + "-" + str(bp_stop_Hz[1]) + " Hz")
+			# if(self.dcounter == 0):
+			# 	self.dprevious_data = self.data[self.n_shift:]
+			# 	self.dcounter = 1
+			# else:
+			# 	self.data = np.concatenate((self.dprevious_data, self.data[self.dwindow_size-self.n_shift:]),axis=0)
+			# 	# print("Notch filter removing: " + str(bp_stop_Hz[0]) + "-" + str(bp_stop_Hz[1]) + " Hz")
 
     def bandpass(self,start,stop):
         bp_Hz = np.zeros(0)
@@ -259,7 +259,7 @@ class ThinkBCI:
         #print(self.data)
 	
         xaxis=np.arange(self.counter,self.counter+2,0.004)
-        self.ax.plot(xaxis,self.data1,color='b')
+        self.ax.plot(xaxis,self.data,color='b')
         self.fig.canvas.draw()
         self.ax.set_xlim(left=max(0, self.counter-10), right=self.counter+1)
         self.counter+= 4
