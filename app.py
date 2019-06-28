@@ -8,6 +8,7 @@ import queue
 import time
 from scipy import signal
 import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
 
 q = queue.Queue(maxsize=1000)
 
@@ -18,39 +19,140 @@ sample_count = 0
 window_size = 64 
 n_shift = 64
 i = 0
+spectrogramData = [[0 for i in range(39)] for i in range(257)]
+spectrogramData = np.array(spectrogramData)
 
 
 counter = 0
 previous_data = []
 rawBuffer = []
-filterBuffer = [0 for i in range(320)]
-filterOutput = [0 for i in range(320)]
-notchOutput = [0 for i in range(320)]
+filterBuffer = [0 for i in range(512)]
+filterOutput = [0 for i in range(512)]
+notchOutput = [0 for i in range(512)]
+bandpassOutput = [0 for i in range(512)]
 plotBuffer = [0 for i in range(4096)]
+specBuffer = [0 for i in range(1024)]
+specCount = 0
 x = [i+1 for i in range(0,4096)]
 # For bandpass
-start = 8
-stop = 13
+start = 1
+stop = 50
+
+#fig1,ax1 = plt.subplots()
+#fig2,ax2 = plt.subplots()
+#fig3,ax3 = plt.subplots()
+
+spec_PSDperBin = 0
+spec_t = 0
+spec_PSDperHz = 0
+spec_freqs = 0
+
+# 39 values 
+spec_time = np.arange(0.512,10,0.248)
+
+def spectrogram():
+	global notchOutput,specBuffer, spec_PSDperHz, spec_freqs, spec_t, spec_PSDperBin,spec_time,spectrogramData
+	f_lim_Hz = [0, 50]   # frequency limits for plotting
+	plt.figure(figsize=(10,5))
+	ax = plt.subplot(1,1,1)
+	#print("SPEC_T")
+	#print(spec_time.shape)
+	#print(spectrogramData.shape)
+	plt.pcolormesh(spec_t, spec_freqs, 10*np.log10(spec_PSDperBin))  # dB re: 1 uV
+	#plt.imshow(spectrogramData)
+	plt.clim([-25,26])
+	plt.xlim(spec_t[0], spec_t[-1])
+	plt.ylim(f_lim_Hz)
+	plt.xlabel('Time (sec)')
+	plt.ylabel('Frequency (Hz)')
+	plt.title("XYA")
+	# add annotation for FFT Parameters
+	ax.text(0.025, 0.95,
+		"NFFT = " + str(512) + "\nfs = " + str(int(250)) + " Hz",
+		transform=ax.transAxes,
+		verticalalignment='top',
+		horizontalalignment='left',
+		backgroundcolor='w')
+	#plt.draw()
+
+def get_spectrum_data():
+	global notchOutput,specBuffer, spec_PSDperHz, spec_freqs, spec_t,spec_PSDperBin,spectrogramData,spec_time
+	NFFT = 512
+	overlap  = NFFT - int(0.25 * 250)
+	spec_PSDperHz, spec_freqs, spec_t  = mlab.specgram(np.squeeze(np.asarray(specBuffer)),
+								   NFFT=NFFT,
+								   window=mlab.window_hanning,
+								   Fs=250,
+								   noverlap=overlap
+								   ) # returns PSD power per Hz
+	#plt.imshow(spec_im)
+	#print("JAJA"*20)
+	#print(len(spec_t))
+	# convert the units of the spectral data
+	#spec_time = spec_t
+	#print(spec_t.shape)
+	#print(spec_t)
+	spec_PSDperBin = spec_PSDperHz * 250 / float(NFFT)
+	#print(spec_PSDperBin.shape)
+	#toShift = spec_PSDperBin.shape[1]
+	#tempBuffer = list(spec_PSDperBin)
+	#spectrogramData[:,:-toShift] = spectrogramData[:,toShift:]
+	#spectrogramData[:,-toShift:] = np.array(tempBuffer)
+	#print(spec_PSDperBin.shape)
+	#time.sleep(100)
+	#print("="*60)
+	#print(spec_PSDperBin)
+	
+	spectrum_PSDperHz = np.mean(spec_PSDperHz,1)
+	#ax2.plot(spec_freqs, 10*np.log10(spectrum_PSDperHz))  # dB re: 1 uV
+	#ax2.set_xlim((0,60))
+	#ax2.set_ylim((-30,50))
+	#plt.draw()
+	#plotname = 'Channel '+str(0)+' Spectrum Average FFT Plot'
+	#plt.set_xlabel('Frequency (Hz)')
+	#plt.ylabel('PSD per Hz (dB re: 1uV^2/Hz)')
+
+	#plt.title("Power Spectrum")
+	#self.plotit(plt, self.plot_filename("Power Spectrum"))
+
 
 def plot(raw,filtered):
 	plt.plot(x,raw,color='green')
 	plt.plot(x,filtered,color='red')
 	plt.draw()
 
-def plot2():
-	global x
-	plt.plot(x, plotBuffer, color='red')
+def makePlot():
 	plt.draw()
 
+def plot2():
+	global x
+	ax1.plot(x, plotBuffer, color='red')
+
 def bandpass():
-	global plotBuffer, notchOutput, start, stop
+	global plotBuffer, notchOutput, start, stop, bandpassOutput, specBuffer, specCount, ax2
 	bp_Hz = np.zeros(0)
 	bp_Hz = np.array([start,stop])
 	b, a = signal.butter(3, bp_Hz/(250 / 2.0),'bandpass')
-	last64Bytes = signal.lfilter(b, a, notchOutput, 0)
-	last64Bytes = last64Bytes[-64:]
-	plotBuffer[:-window_size] = plotBuffer[window_size:]
-	plotBuffer[-window_size:] = last64Bytes
+	bandpassOutput = signal.lfilter(b, a, notchOutput, 0)
+	last64Bytes = bandpassOutput[-64:]
+	specBuffer = specBuffer + list(last64Bytes)
+	#specBuffer = list(last64Bytes)
+	specCount += 1
+	print(specCount)
+	if(specCount == 8):
+		#ax3.clear()
+		#ax2.clear()
+
+		#plt.clf()
+		get_spectrum_data()
+		spectrogram()
+		#spectrogram()
+		specCount = 0
+		specBuffer = []
+	#plotBuffer[:-window_size] = plotBuffer[window_size:]
+	#plotBuffer[-window_size:] = last64Bytes
+	#plot2()
+	#makePlot()
 
 def notch_filter():
 	global filterOutput,plotBuffer, notchOutput
@@ -90,18 +192,18 @@ def process_raw():
 	notch_filter()
 	bandpass()
 	#plot(rawBuffer, last64)	
-	plot2()
-	plt.pause(0.001)
+	#plot2()
+	#get_spectrum_data()
+	#makePlot()
+	plt.pause(0.0001)
+	#ax1.clear()
 	#time.sleep(1)
-	plt.clf()
 
 plt.ion()
-plt.ylim(-3000,3000)
-plt.legend()
 plt.show()
 print("AFTER PYQT")
 	
-board = OpenBCICyton(port='/dev/ttyUSB0', daisy=False)
+board = OpenBCICyton(port='/dev/ttyUSB1', daisy=False)
 board.start_stream(acquire_raw)
 #t1 = threading.Thread(target=board.start_stream, args=(acquire_raw,))
 #board.start_stream(acquire_raw)

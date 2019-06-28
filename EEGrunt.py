@@ -231,6 +231,8 @@ class EEGrunt:
         plt.figure(figsize=(10,5))
         ax = plt.subplot(1,1,1)
         plt.pcolor(self.spec_t, self.spec_freqs, 10*np.log10(self.spec_PSDperBin))  # dB re: 1 uV
+        print("spec_t/"*40)
+        print(spec_t)
         plt.clim([-25,26])
         plt.xlim(self.spec_t[0], self.spec_t[-1]+1)
         plt.ylim(f_lim_Hz)
