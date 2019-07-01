@@ -39,7 +39,7 @@ start = 1
 stop = 50
 
 fig1,ax1 = plt.subplots()
-#fig2,ax2 = plt.subplots()
+fig2,ax2 = plt.subplots()
 #fig3,ax3 = plt.subplots()
 
 spec_PSDperBin = 0
@@ -49,8 +49,8 @@ spec_freqs = 0
 
 # 39 values 
 spec_time = np.arange(0.512,10,0.248)
-fig = plt.figure(figsize=(10,5))
-ax = fig.add_subplot(1,1,1)
+plt.figure(figsize=(10,5))
+ax = plt.subplot(1,1,1)
 
 def spectrogram():
 	global notchOutput,specBuffer, spec_PSDperHz, spec_freqs, spec_t, spec_PSDperBin,spec_time,spectrogramData
@@ -58,14 +58,14 @@ def spectrogram():
 	#print("SPEC_T")
 	print(spec_t.shape)
 	#print(spectrogramData.shape)
-	ax.pcolormesh(spec_t, spec_freqs, 10*np.log10(spec_PSDperBin))  # dB re: 1 uV
+	plt.pcolormesh(spec_t, spec_freqs, 10*np.log10(spec_PSDperBin))  # dB re: 1 uV
 	#plt.imshow(spectrogramData)
-	#plt.clim([-25,26])
-	ax.set_xlim(spec_t[0], spec_t[-1])
-	ax.set_ylim(f_lim_Hz)
-	ax.set_xlabel('Time (sec)')
-	ax.set_ylabel('Frequency (Hz)')
-	ax.set_title("XYA")
+	plt.clim([-25,26])
+	plt.xlim(spec_t[0], spec_t[-1])
+	plt.ylim(f_lim_Hz)
+	plt.xlabel('Time (sec)')
+	plt.ylabel('Frequency (Hz)')
+	plt.title("XYA")
 	# add annotation for FFT Parameters
 	ax.text(0.025, 0.95,
 		"NFFT = " + str(512) + "\nfs = " + str(int(250)) + " Hz",
@@ -104,10 +104,10 @@ def get_spectrum_data():
 	#print(spec_PSDperBin)
 	
 	spectrum_PSDperHz = np.mean(spec_PSDperHz,1)
-	#ax2.plot(spec_freqs, 10*np.log10(spectrum_PSDperHz))  # dB re: 1 uV
-	#ax2.set_xlim((0,60))
-	#ax2.set_ylim((-30,50))
-	#plt.draw()
+	ax2.plot(spec_freqs, 10*np.log10(spectrum_PSDperHz))  # dB re: 1 uV
+	ax2.set_xlim((0,60))
+	ax2.set_ylim((-30,50))
+	plt.draw()
 	#plotname = 'Channel '+str(0)+' Spectrum Average FFT Plot'
 	#plt.set_xlabel('Frequency (Hz)')
 	#plt.ylabel('PSD per Hz (dB re: 1uV^2/Hz)')
@@ -136,22 +136,21 @@ def bandpass():
 	bandpassOutput = signal.lfilter(b, a, notchOutput, 0)
 	last64Bytes = bandpassOutput[-64:]
 	specBuffer = specBuffer + list(last64Bytes)
-	specBuffer = list(last64Bytes)
 	specCount += 1
 	print(specCount)
-	if(specCount == 64):
+	if(specCount == 8):
 		#ax3.clear()
-		#ax2.clear()
-		ax.clear()
-		#plt.clf()
+		ax2.clear()
+		#ax.clear()
+		plt.clf()
 		get_spectrum_data()
 		spectrogram()
 		specCount = 0
 		specBuffer = []
 	plotBuffer[:-window_size] = plotBuffer[window_size:]
 	plotBuffer[-window_size:] = last64Bytes
-	plot2()
-	makePlot()
+	#plot2()
+	#makePlot()
 	#return last64Bytes
 
 def notch_filter():
@@ -190,7 +189,7 @@ def process_raw():
 
 	last64 = remove_dc_offset()
 	notch_filter()
-	lastBandpass = bandpass()
+	bandpass()
 	#plot(rawBuffer, lastBandpass)	
 	#plot2()
 	#get_spectrum_data()
