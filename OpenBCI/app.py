@@ -5,10 +5,11 @@ import time # to set up timestamps
 import numpy as np # for operations on buffers
 import matplotlib.pyplot as plt # to ppppppppplot
 import scipy.signal as signal # to signal
-
+from scipy.fftpack import fft
+from matplotlib import mlab
 
 class DataStream():
-	def __init__(self,port=None,daisy=False,chunk_size=250,b_times=32,n_channels=8):
+	def __init__(self,port=None,daisy=False,chunk_size=250,b_times=32,n_channels=8,spec_analyse=3):
 		if(port == None):
 			self.get_port()
 		else:
@@ -25,14 +26,18 @@ class DataStream():
 		self.channels_to_process = []
 		self.filter_outputs = {}
 		self.plot_buffer = {}
+		self.spec_analyse = spec_analyse
 		# Plotting and filter buffers
 		self.filter_outputs['dc_offset'] = np.zeros(shape=(self.buffer_size))
 		self.filter_outputs['notch_filter'] = np.zeros(shape=(self.buffer_size))
 		self.filter_outputs['bandpass'] = np.zeros(shape=(self.buffer_size))
+		self.filter_outputs['spec_analyser'] = np.array([])
 		self.plot_buffer['dc_offset'] = np.array([])
 		self.plot_buffer['notch_filter'] = np.array([])
+		self.g = 0
 		self.plot_buffer['bandpass'] = np.array([])
-		self.plot_buffer['spectral_analysis'] = np.array([])
+		self.plot_buffer['spec_analyser'] = np.zeros(shape=(self.window_size*self.chunk_size))
+		self.plot_buffer['spec_freqs'] = np.zeros(shape=(self.window_size*self.chunk_size))
 
 	def read_chunk(self,n_chunks=1):
 		all_chunks = []
@@ -47,6 +52,7 @@ class DataStream():
 			obj = re.match('ttyUSB.$',i)
 			if(obj != None):
 				self.port = '/dev/'+obj.group()
+
 
 	def notch_filter(self):
 		notch_freq_Hz = np.array([50.0])  # main + harmonic frequencies
@@ -77,6 +83,19 @@ class DataStream():
 		self.filter_outputs['dc_offset'][:-self.window_size] = self.filter_outputs['dc_offset'][self.window_size:]
 		self.filter_outputs['dc_offset'][-self.window_size:] = dcOutput
 
+	def get_spectrum_data(self):
+		NFFT = 1024
+		overlap  = NFFT - int(0.25 * 250)
+		spec_PSDperHz, spec_freqs, spec_t  = mlab.specgram(np.squeeze(self.filter_outputs['spec_analyser']),
+									   NFFT=NFFT,
+									   window=mlab.window_hanning,
+									   Fs=250,
+									   noverlap=overlap
+									   ) # returns PSD power per Hz
+		spectrum_PSDperHz = np.mean(spec_PSDperHz,1)
+		self.plot_buffer['spec_analyser'] = np.copy(10*np.log10(spectrum_PSDperHz))
+		self.plot_buffer['spec_freqs'] = np.copy(spec_freqs)
+
 	def process_raw(self,channels=[0],meth='live'):
 		if(channels=='all'):
 			self.channels_to_process = [i+1 for i in range(self.n_channels)]
@@ -101,7 +120,14 @@ class DataStream():
 				# remove the dc offset from the raw_buffer data
 				self.remove_dc_offset()
 				#apply notch_filter
-				#self.notch_filter()
+				self.notch_filter()
 				#apply bandpass
-				#self.bandpass()
+				self.bandpass()
+				# handle spec analyser
+				self.filter_outputs['spec_analyser'] = np.append(self.filter_outputs['spec_analyser'], self.filter_outputs['bandpass'][-self.window_size:])
+				if(self.filter_outputs['spec_analyser'].reshape(-1).shape[0] == self.window_size*self.spec_analyse):
+					self.g= 1
+					self.get_spectrum_data()
+					self.filter_outputs['spec_analyser'] = np.array([])
+						
 

@@ -1,4 +1,4 @@
-
+import numpy as np
 import pyqtgraph as pg
 import pyaudio
 from PyQt4 import QtCore, QtGui
@@ -67,6 +67,8 @@ class SpectrogramWidget(pg.PlotWidget):
         # convert to dB scale
 
         psd = 20 * np.log10(psd)
+        print(psd)
+        x = raw_input('JAJAJ: ')
 
         # roll down one and replace leading edge with new data
 
