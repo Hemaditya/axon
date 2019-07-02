@@ -149,8 +149,8 @@ def bandpass():
 		specBuffer = []
 	plotBuffer[:-window_size] = plotBuffer[window_size:]
 	plotBuffer[-window_size:] = last64Bytes
-	#plot2()
-	#makePlot()
+	plot2()
+	makePlot()
 	#return last64Bytes
 
 def notch_filter():
@@ -173,11 +173,13 @@ def remove_dc_offset():
 def acquire_raw(sample):
 	global sample_count , window_size, raw_data, counter, previous_data, rawBuffer
 	sample_count+= 1
-	rawBuffer.append(sample.channels_data[0]*uVolts_per_count)
+	rawBuffer.append(sample[0]*uVolts_per_count)
 	if(sample_count == window_size):
 		sample_count = 0
 		process_raw()
 		rawBuffer = []
+		#x = raw_input("JAJAJA:")
+		time.sleep(1)
 		
 	
 
@@ -190,7 +192,7 @@ def process_raw():
 	last64 = remove_dc_offset()
 	notch_filter()
 	bandpass()
-	#plot(rawBuffer, lastBandpass)	
+	#plot(rawBuffer, last64)	
 	#plot2()
 	#get_spectrum_data()
 	#makePlot()
@@ -202,8 +204,12 @@ plt.ion()
 plt.show()
 print("AFTER PYQT")
 	
-board = OpenBCICyton(port='/dev/ttyUSB1', daisy=False)
-board.start_stream(acquire_raw)
+board = OpenBCICyton(port='/dev/ttyUSB0', daisy=False)
+while(True):
+	data = board.start_stream(1)
+	print(data)
+	acquire_raw(data[0])
+
 #t1 = threading.Thread(target=board.start_stream, args=(acquire_raw,))
 #board.start_stream(acquire_raw)
 #t1.start()
