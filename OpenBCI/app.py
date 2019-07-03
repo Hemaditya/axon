@@ -40,7 +40,7 @@ class DataStream():
 		self.plot_buffer['bandpass'] = np.array([])
 		self.plot_buffer['spec_analyser'] = np.zeros(shape=(self.window_size*self.chunk_size))
 		self.plot_buffer['spec_freqs'] = np.zeros(shape=(self.window_size*self.chunk_size))
-		self.plot_buffer['spectrogram'] = np.zeros(shape=(100,self.NFFT/2 + 1))
+		self.plot_buffer['spectrogram'] = np.zeros(shape=(100,self.NFFT/2 +1))
 
 	def read_chunk(self,n_chunks=1):
 		all_chunks = []
@@ -73,7 +73,7 @@ class DataStream():
 		bp_Hz = np.zeros(0)
 		bp_Hz = np.array([start,stop])
 		b, a = signal.butter(3, bp_Hz/(250 / 2.0),'bandpass')
-		bandpassOutput = signal.lfilter(b, a, self.filter_outputs['dc_offset'], 0)[-self.window_size:]
+		bandpassOutput = signal.lfilter(b, a, self.filter_outputs['notch_filter'], 0)[-self.window_size:]
 		#self.plot_buffer['bandpass'] = np.append(self.filter_outputs['bandpass'],bandpassOutput)
 		self.filter_outputs['bandpass'][:-self.window_size] = self.filter_outputs['bandpass'][self.window_size:]
 		self.filter_outputs['bandpass'][-self.window_size:] = bandpassOutput
@@ -108,7 +108,7 @@ class DataStream():
 		self.plot_buffer['spectrogram'][-1:] = 10*np.log10(spectrum_PSDperHz).reshape(-1)
 		self.spec_True = 1
 
-	def process_raw(self,channels=[0],meth='live'):
+	def process_raw(self,channels=[3],meth='live'):
 		if(channels=='all'):
 			self.channels_to_process = [i+1 for i in range(self.n_channels)]
 			pass
