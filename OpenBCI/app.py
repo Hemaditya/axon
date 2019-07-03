@@ -70,7 +70,7 @@ class DataStream():
 		bp_Hz = np.zeros(0)
 		bp_Hz = np.array([start,stop])
 		b, a = signal.butter(3, bp_Hz/(250 / 2.0),'bandpass')
-		bandpassOutput = signal.lfilter(b, a, self.filter_outputs['notch_filter'], 0)[-self.window_size:]
+		bandpassOutput = signal.lfilter(b, a, self.filter_outputs['dc_offset'], 0)[-self.window_size:]
 		#self.plot_buffer['bandpass'] = np.append(self.filter_outputs['bandpass'],bandpassOutput)
 		self.filter_outputs['bandpass'][:-self.window_size] = self.filter_outputs['bandpass'][self.window_size:]
 		self.filter_outputs['bandpass'][-self.window_size:] = bandpassOutput
@@ -84,7 +84,7 @@ class DataStream():
 		self.filter_outputs['dc_offset'][-self.window_size:] = dcOutput
 
 	def get_spectrum_data(self):
-		NFFT = 1024
+		NFFT = 512
 		overlap  = NFFT - int(0.25 * 250)
 		spec_PSDperHz, spec_freqs, spec_t  = mlab.specgram(np.squeeze(self.filter_outputs['spec_analyser']),
 									   NFFT=NFFT,

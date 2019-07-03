@@ -9,10 +9,11 @@ win = pg.GraphicsWindow(title='Plot')
 win.resize(1000,600)
 p1 = win.addPlot(title="LivePlot")
 p1.setClipToView(True)
-#p1.setRange(xRange=[0,60])
+p1.setRange(xRange=[0,60])
+p1.setRange(yRange=[-50,50])
 curve = p1.plot(pen='y')
 
-appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=20)
+appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5)
 def runApp(count=None):
 	if(count == None):
 		while(True):
