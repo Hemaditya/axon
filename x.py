@@ -67,14 +67,15 @@ class SpectrogramWidget(pg.PlotWidget):
         # convert to dB scale
 
         psd = 20 * np.log10(psd)
-        print(psd)
-        x = raw_input('JAJAJ: ')
+        print("PSD SHAPE: ",psd.shape)
+        
 
         # roll down one and replace leading edge with new data
 
         self.img_array = np.roll(self.img_array, -1, 0)
         self.img_array[-1:] = psd
-
+        print("image shape: ",self.img_array.shape)
+      #  x = raw_input('JAJAJ: ')
         self.img.setImage(self.img_array, autoLevels=False)
 
 if __name__ == '__main__':

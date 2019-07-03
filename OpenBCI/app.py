@@ -9,7 +9,7 @@ from scipy.fftpack import fft
 from matplotlib import mlab
 
 class DataStream():
-	def __init__(self,port=None,daisy=False,chunk_size=250,b_times=32,n_channels=8,spec_analyse=3):
+	def __init__(self,port=None,daisy=False,chunk_size=250,b_times=32,n_channels=8,spec_analyse=3, NFFT=512):
 		if(port == None):
 			self.get_port()
 		else:
@@ -27,6 +27,8 @@ class DataStream():
 		self.filter_outputs = {}
 		self.plot_buffer = {}
 		self.spec_analyse = spec_analyse
+		self.spec_True = 0
+		self.NFFT = NFFT
 		# Plotting and filter buffers
 		self.filter_outputs['dc_offset'] = np.zeros(shape=(self.buffer_size))
 		self.filter_outputs['notch_filter'] = np.zeros(shape=(self.buffer_size))
@@ -38,6 +40,7 @@ class DataStream():
 		self.plot_buffer['bandpass'] = np.array([])
 		self.plot_buffer['spec_analyser'] = np.zeros(shape=(self.window_size*self.chunk_size))
 		self.plot_buffer['spec_freqs'] = np.zeros(shape=(self.window_size*self.chunk_size))
+		self.plot_buffer['spectrogram'] = np.zeros(shape=(100,self.NFFT/2 + 1))
 
 	def read_chunk(self,n_chunks=1):
 		all_chunks = []
@@ -65,8 +68,8 @@ class DataStream():
 			self.filter_outputs['notch_filter'][-self.window_size:] = notchOutput
 
 	def bandpass(self):
-		start = 5
-		stop = 45
+		start = 1
+		stop = 60
 		bp_Hz = np.zeros(0)
 		bp_Hz = np.array([start,stop])
 		b, a = signal.butter(3, bp_Hz/(250 / 2.0),'bandpass')
@@ -92,9 +95,18 @@ class DataStream():
 									   Fs=250,
 									   noverlap=overlap
 									   ) # returns PSD power per Hz
+		#print('PSDHERZ: ',spec_PSDperHz.shape)
+		#print('spec_freqs: ',spec_freqs.shape)
+		#print('t: ',spec_t.shape)
+		#x = raw_input("SAD")
 		spectrum_PSDperHz = np.mean(spec_PSDperHz,1)
 		self.plot_buffer['spec_analyser'] = np.copy(10*np.log10(spectrum_PSDperHz))
 		self.plot_buffer['spec_freqs'] = np.copy(spec_freqs)
+
+		#self.plot_buffer['spectrogram'][:,:-1] = self.plot_buffer['spectrogram'][:,1:]
+		self.plot_buffer['spectrogram'] = np.roll(self.plot_buffer['spectrogram'],-1,0)
+		self.plot_buffer['spectrogram'][-1:] = 10*np.log10(spectrum_PSDperHz).reshape(-1)
+		self.spec_True = 1
 
 	def process_raw(self,channels=[0],meth='live'):
 		if(channels=='all'):
