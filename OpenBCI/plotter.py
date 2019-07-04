@@ -9,7 +9,7 @@ import time
 
 win = pg.GraphicsWindow(title='Plot')
 win.resize(1000,600)
-view = win.addViewBox()
+view = win.addPlot()
 # Spectrogram Initialization
 pos = np.array([0., 1., 0.5, 0.25, 0.75])
 color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
@@ -17,16 +17,19 @@ cmap = pg.ColorMap(pos, color)
 lut = cmap.getLookupTable(0.0, 1.0, 256)
 item = pg.ImageItem()
 view.addItem(item)
+freq = np.arange(0,60,60.0/257.0)
+yscale = 1.0/(257/freq[-1])
+item.scale(300,yscale)
 item.setLookupTable(lut)
 item.setLevels([-50,40])
+#view.setLabel('left','Freq')
+#self.img.scale((1./FS)*CHUNKSZ, yscale)
 # The below 4 lines are for plotting filter_outputs
 #p1.setClipToView(True)
-#p1.setRange(xRange=[0,60])
-#p1.setRange(yRange=[-50,50])
 #curve = p1.plot(pen='y')
 
 # Initialize the processing stream
-appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5)
+appObj = app.DataStream(chunk_size=250,b_times=1,spec_analyse=1)
 # The below function will be run by thread t1
 def runApp(count=None):
 	if(count == None):
@@ -42,11 +45,12 @@ time.sleep(0.1)
 
 # Main plotting function
 def update():
-	# The below 4 lines are for plotting filter_outputs
-	#if(appObj.plot_buffer['spectral_analysis'].shape[0] == appObj.window_size * appObj.spec_analysis):
-	#	curve.setData(appObj.plot_buffer['spectral_analysis']
-	#if appObj.g == 1:
-	#	curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
+	 #The below 4 lines are for plotting filter_outputs
+#	if(appObj.plot_buffer['spectral_analysis'].shape[0] == appObj.window_size * appObj.spec_analysis):
+#		curve.setData(appObj.plot_buffer['spectral_analysis']
+#	if appObj.g == 1:
+#		curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
+	#curve.setData(appObj.plot_buffer['notch_filter'])
 
 	if(appObj.spec_True == 1):
 		item.setImage(appObj.plot_buffer['spectrogram'],autoLevels=False)

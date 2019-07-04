@@ -2,6 +2,7 @@ import numpy as np
 import pyqtgraph as pg
 import pyaudio
 from PyQt4 import QtCore, QtGui
+import time
 
 FS = 44100 #Hz
 
@@ -19,7 +20,13 @@ class MicrophoneRecorder():
                             frames_per_buffer=CHUNKSZ)
 
     def read(self):
-        data = self.stream.read(CHUNKSZ)
+        t1 = time.time()
+        #data = self.stream.read(CHUNKSZ)
+        time.sleep(1)
+        t2 = time.time()
+        print(t2-t1)
+        x= raw_input("DSA")
+		#data = np.
         y = np.fromstring(data, 'int16')
         self.signal.emit(y)
 
