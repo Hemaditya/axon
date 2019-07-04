@@ -116,14 +116,6 @@ class DataStream():
 			self.channels_to_process = [int(i) for i in channels]
 
 		for channel in self.channels_to_process:
-			#if(meth == 'static'):
-			#	self.filter_outputs['dc_offset'] = np.zeros(shape=(self.buffer_size))
-			#	self.filter_outputs['notch_filter'] = np.zeros(shape=(self.buffer_size))
-			#	self.filter_outputs['bandpass'] = np.zeros(shape=(self.buffer_size))
-			#	self.plot_buffer['dc_offset'] = np.array([])
-			#	self.plot_buffer['notch_filter'] = np.array([])
-			#	self.plot_buffer['bandpass'] = np.array([])
-						
 			for _n in range(self.data_buffer.shape[0]):
 				# shift window_size bytes from raw_buffer and add new bytes
 				self.raw_buffer[:-self.window_size] = self.raw_buffer[self.window_size:]
