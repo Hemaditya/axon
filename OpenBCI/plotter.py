@@ -7,24 +7,56 @@ from pyqtgraph import QtCore, QtGui
 import matplotlib.pyplot
 import time
 
-
-win = pg.GraphicsWindow(title='Plot')
-win.resize(1000,600)
-p1 = win.addPlot()
-win.nextRow()
-p2 = win.addPlot()
-p3 = win.addPlot()
-win.nextRow()
-p4 = win.addPlot()
-#Spectrogram Initialization
+channels = [0,1,2,3,4,5,6,7]
 pos = np.array([0., 1., 0.5, 0.25, 0.75])
 color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
 cmap = pg.ColorMap(pos, color)
 lut = cmap.getLookupTable(0.0, 1.0, 256)
-item = pg.ImageItem()
-p1.addItem(item)
-item.setLookupTable(lut)
-item.setLevels([-50,100])
+gb_windows = []
+mode = 1
+
+def create_plots(channels):
+	global pos, color, cmap, lut
+	windows = []
+	imageItems = []
+	win = pg.GraphicsWindow(title="Giant Plot")
+	gb_windows.append(win)
+	for c in channels:
+		if((c+1)%3 == 0):
+			win.nextRow()
+		plot = win.addPlot(title="Channel "+str(c))	
+		windows.append(plot)
+		item = pg.ImageItem()
+		imageItems.append(item)
+		windows[-1].addItem(item)
+		item.setLookupTable(lut)
+		item.setLevels([-50,40])
+	return windows,imageItems
+
+def create_windows(channels):
+	global pos, color, cmap, lut, gb_windows
+	gb_windows
+	windows = []
+	imageItems = []
+	for c in channels:
+		win = pg.GraphicsWindow(title="Channel-"+str(c))
+		gb_windows.append(win)
+		plot = win.addPlot()
+		windows.append(plot)
+		item = pg.ImageItem()
+		imageItems.append(item)
+		windows[-1].addItem(item)
+		item.setLookupTable(lut)
+		item.setLevels([-50,40])
+	return windows,imageItems
+
+all_windows,all_items = create_plots(channels)
+
+#Spectrogram Initialization
+#item = pg.ImageItem()
+#p1.addItem(item)
+#item.setLookupTable(lut)
+#item.setLevels([-50,100])
 # The below 4 lines are for plotting filter_outputs
 #p1.setClipToView(True)
 #p1.setRange(xRange=[0,60])
@@ -35,10 +67,11 @@ item.setLevels([-50,100])
 appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5,spectrogramWindow=300)
 # The below function will be run by thread t1
 def runApp(count=None):
+	global channels
 	if(count == None):
 		while(True):
 			appObj.read_chunk()
-			appObj.process_raw()
+			appObj.process_raw(channels)
 
 
 # A thread to start processing of data
@@ -48,17 +81,17 @@ time.sleep(0.1)
 
 # Main plotting function
 def update():
+	global channels, all_items
 	# The below 4 lines are for plotting filter_outputs
 	#if(appObj.plot_buffer['spectral_analysis'].shape[0] == appObj.window_size * appObj.spec_analysis):
 	#	curve.setData(appObj.plot_buffer['spectral_analysis']
 	#if appObj.g == 1:
 	#	curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
 
-	if(appObj.spec_True == 1):
-		print(np.min(appObj.plot_buffer['spectrogram'][-1]))
-		print(np.max(appObj.plot_buffer['spectrogram'][-1]))
-		item.setImage(appObj.plot_buffer['spectrogram'][:,:60],autoLevels=False)
-		appObj.spec_True = 0
+	for i in channels:
+		if(appObj.spec_True[i] == 1):
+			all_items[i].setImage(appObj.plot_buffer['spectrogram'][i][:,:60],autoLevels=False)
+			appObj.spec_True[i] = 0
 	pass
 	
 # PyQTgraph initialization
