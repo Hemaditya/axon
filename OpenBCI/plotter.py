@@ -9,7 +9,7 @@ import time
 
 win = pg.GraphicsWindow(title='Plot')
 win.resize(1000,600)
-view = win.addViewBox()
+view = win.addPlot()
 # Spectrogram Initialization
 pos = np.array([0., 1., 0.5, 0.25, 0.75])
 color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
