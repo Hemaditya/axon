@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 win = pg.GraphicsWindow(title='color maps')
 
 p1 = win.addPlot()
-pos = np.array([0.0,1.0,0.5])
-colors = np.array([[255,0,0,255],[255,255,0,255],[0,255,255,255]], dtype=np.ubyte)
+pos = np.array([0.70,0.35,0.0])
+colors = np.array([[255,0,0,255],[0,255,0,255],[0,0,255,255]], dtype=np.ubyte)
 
 cmap = pg.ColorMap(pos, colors)
 lut = cmap.getLookupTable(0.0,1.0,256)
@@ -18,9 +18,10 @@ lut = cmap.getLookupTable(0.0,1.0,256)
 item = pg.ImageItem()
 p1.addItem(item)
 item.setLookupTable(lut)
-
-l = [np.arange(0,256) for i in range(3)]
+l = [np.arange(0,256) for i in range(1)]
 l = np.array(l)
+print(lut)
+
 
 #x = np.array([lut for i in range(1)]).reshape(10,1,3)
 item.setImage(l)

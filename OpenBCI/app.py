@@ -125,12 +125,13 @@ class DataStream():
 									   noverlap=overlap
 									   ) # returns PSD power per Hz
 		spectrum_PSDperHz = np.mean(spec_PSDperHz,1)
-		self.plot_buffer['spec_analyser'] = np.copy(10*np.log10(spectrum_PSDperHz))
+		#self.plot_buffer['spec_analyser'] = np.copy(10*np.log10(spectrum_PSDperHz))
 		self.plot_buffer['spec_freqs'] = np.copy(spec_freqs)
 
 		#self.plot_buffer['spectrogram'][:,:-1] = self.plot_buffer['spectrogram'][:,1:]
 		self.plot_buffer['spectrogram'] = np.roll(self.plot_buffer['spectrogram'],-1,0)
-		self.plot_buffer['spectrogram'][-1:] = 10*np.log10(spectrum_PSDperHz).reshape(-1)
+		spec_PSDperBin = spectrum_PSDperHz * 250.0 / float(NFFT)
+		self.plot_buffer['spectrogram'][-1:] = 10*np.log10(spec_PSDperBin).reshape(-1)
 		self.spec_True = 1
 
 	def process_raw(self,channels=[0],meth='live'):

@@ -4,21 +4,27 @@ import threading
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph import QtCore, QtGui
+import matplotlib.pyplot
 import time
 
 
 win = pg.GraphicsWindow(title='Plot')
 win.resize(1000,600)
-view = win.addPlot()
-# Spectrogram Initialization
+p1 = win.addPlot()
+win.nextRow()
+p2 = win.addPlot()
+p3 = win.addPlot()
+win.nextRow()
+p4 = win.addPlot()
+#Spectrogram Initialization
 pos = np.array([0., 1., 0.5, 0.25, 0.75])
 color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
 cmap = pg.ColorMap(pos, color)
 lut = cmap.getLookupTable(0.0, 1.0, 256)
 item = pg.ImageItem()
-view.addItem(item)
+p1.addItem(item)
 item.setLookupTable(lut)
-item.setLevels([-50,40])
+item.setLevels([-50,100])
 # The below 4 lines are for plotting filter_outputs
 #p1.setClipToView(True)
 #p1.setRange(xRange=[0,60])
@@ -49,8 +55,9 @@ def update():
 	#	curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
 
 	if(appObj.spec_True == 1):
+		print(np.min(appObj.plot_buffer['spectrogram'][-1]))
+		print(np.max(appObj.plot_buffer['spectrogram'][-1]))
 		item.setImage(appObj.plot_buffer['spectrogram'][:,:60],autoLevels=False)
-		print(appObj.plot_buffer['spectrogram'].shape)
 		appObj.spec_True = 0
 	pass
 	
