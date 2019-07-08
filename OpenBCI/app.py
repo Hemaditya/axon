@@ -36,11 +36,11 @@ class DataStream():
 		self.currentChannel = -1
 		self.window_size = chunk_size
 		self.stateBand = [0,0,0,0,0,0]
-		self.plot_size=5
+		self.plot_size=10
 		self.state = [0,0]
 		self.stateNotch = [0,0,0,0,0,0]
 		self.prevDC = 0
-		self.buffer_size = self.chunk_size*b_times
+		self.buffer_size = self.chunk_size*self.plot_size
 		self.data_buffer = []
 		self.raw_buffer = {}
 		self.uVolts_per_count = (4.5)/24/(2**23-1)*1000000 # scalar factor to convert raw data into real world signal data
@@ -72,10 +72,10 @@ class DataStream():
 		for i in range(self.n_channels):
 			self.g[i] = 0
 			self.spec_True[i] = 0
-			self.raw_buffer[i] = np.zeros(shape=(self.buffer_size))
-			self.filter_outputs['dc_offset'][i] = np.zeros(shape=(self.buffer_size))
-			self.filter_outputs['notch_filter'][i] = np.zeros(shape=(self.buffer_size))
-			self.filter_outputs['bandpass'][i] = np.zeros(shape=(self.buffer_size))
+			self.raw_buffer[i] = np.zeros(shape=(self.window_size))
+			self.filter_outputs['dc_offset'][i] = np.zeros(shape=(self.window_size))
+			self.filter_outputs['notch_filter'][i] = np.zeros(shape=(self.window_size))
+			self.filter_outputs['bandpass'][i] = np.zeros(shape=(self.window_size))
 			self.filter_outputs['spec_analyser'][i] = np.array([])
 			self.plot_buffer['dc_offset'][i] = np.zeros(shape=(self.buffer_size))
 			self.plot_buffer['notch_filter'][i] = np.zeros(shape=(self.buffer_size))
@@ -153,7 +153,7 @@ class DataStream():
 #		self.filter_outputs['dc_offset'][self.currentChannel][:-self.window_size] = self.filter_outputs['dc_offset'][self.currentChannel][self.window_size:]
 #		self.filter_outputs['dc_offset'][self.currentChannel][-self.window_size:] = dcOutput
 #=======
-		dcOutput, self.state = signal.lfilter(b, a, self.raw_buffer[self.currentChannel], zi=self.state)
+		dcOutput, self.state = signal.lfilter(b, a, self.raw_buffer[self.currentChannel], zi=self.state)[-self.window_size:]
 		self.prevDC = dcOutput[-1:-3:-1]
 		self.filter_outputs['dc_offset'][self.currentChannel][:-self.window_size] = self.filter_outputs['dc_offset'][self.currentChannel][self.window_size:]
 		self.filter_outputs['dc_offset'][self.currentChannel][-self.window_size:] = dcOutput

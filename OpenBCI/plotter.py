@@ -7,13 +7,13 @@ from pyqtgraph import QtCore, QtGui
 import matplotlib.pyplot
 import time
 
-channels = [0,1,2,3]
+channels = [0,1]
 pos = np.array([0., 1., 0.5, 0.25, 0.75])
 color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
 cmap = pg.ColorMap(pos, color)
 lut = cmap.getLookupTable(0.0, 1.0, 256)
 gb_windows = []
-mode = 1
+mode = 0
 
 all_windows = []
 all_items = []
