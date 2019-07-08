@@ -61,7 +61,7 @@ class DataStream():
 		self.plot_buffer['bandpass'] = np.array([])
 		self.plot_buffer['spec_analyser'] = np.zeros(shape=(self.window_size*self.chunk_size))
 		self.plot_buffer['spec_freqs'] = np.zeros(shape=(self.window_size*self.chunk_size))
-		self.plot_buffer['spectrogram'] = np.zeros(shape=(100,self.NFFT/2 + 1))
+		self.plot_buffer['spectrogram'] = np.zeros(shape=(spectrogramWindow,self.NFFT/2 + 1))
 
 	def read_chunk(self,n_chunks=1):
 		# n_chunks = number of chunks to read. Keep it 1 for live data
@@ -116,7 +116,7 @@ class DataStream():
 
 	def get_spectrum_data(self):
 		# This is to generate spectrogram data
-		NFFT = 512
+		NFFT = self.NFFT
 		overlap  = NFFT - int(0.25 * 250)
 		spec_PSDperHz, spec_freqs, spec_t  = mlab.specgram(np.squeeze(self.filter_outputs['spec_analyser']),
 									   NFFT=NFFT,

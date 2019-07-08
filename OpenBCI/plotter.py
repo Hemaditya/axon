@@ -22,11 +22,11 @@ item.setLevels([-50,40])
 # The below 4 lines are for plotting filter_outputs
 #p1.setClipToView(True)
 #p1.setRange(xRange=[0,60])
-#p1.setRange(yRange=[-50,50])
+#view.setRange(yRange=[0,100])
 #curve = p1.plot(pen='y')
 
 # Initialize the processing stream
-appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5)
+appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5,spectrogramWindow=300)
 # The below function will be run by thread t1
 def runApp(count=None):
 	if(count == None):
@@ -49,7 +49,8 @@ def update():
 	#	curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
 
 	if(appObj.spec_True == 1):
-		item.setImage(appObj.plot_buffer['spectrogram'],autoLevels=False)
+		item.setImage(appObj.plot_buffer['spectrogram'][:,:60],autoLevels=False)
+		print(appObj.plot_buffer['spectrogram'].shape)
 		appObj.spec_True = 0
 	pass
 	
