@@ -89,11 +89,10 @@ if(mode == 1):
 appObj = app.DataStream(chunk_size=250,b_times=1,spec_analyse=1,spectrogramWindow=300)
 # The below function will be run by thread t1
 def runApp(count=None):
-	global channels
 	if(count == None):
 		while(True):
 			appObj.read_chunk()
-			appObj.process_raw(channels)
+			appObj.process_raw()
 
 
 # A thread to start processing of data
