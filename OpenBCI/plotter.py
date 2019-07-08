@@ -7,7 +7,7 @@ from pyqtgraph import QtCore, QtGui
 import matplotlib.pyplot
 import time
 
-channels = [0,1,2,3,4,5,6,7]
+channels = [0,1,2,3]
 pos = np.array([0., 1., 0.5, 0.25, 0.75])
 color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
 cmap = pg.ColorMap(pos, color)
@@ -15,7 +15,25 @@ lut = cmap.getLookupTable(0.0, 1.0, 256)
 gb_windows = []
 mode = 1
 
+all_windows = []
+all_items = []
+all_plots = []
+all_curves = []
+
 def create_plots(channels):
+	plots = []
+	curves = []
+	win = pg.GraphicsWindow(title="Bandpass")
+	gb_windows.append(win)
+	for c in channels:
+		plot = win.addPlot(title="Channel "+str(c))
+		plots.append(plot)
+		curve = plots[-1].plot()
+		curves.append(curve)
+		win.nextRow()
+	return plots, curves
+
+def create_spectrograms(channels):
 	global pos, color, cmap, lut
 	windows = []
 	imageItems = []
@@ -50,7 +68,10 @@ def create_windows(channels):
 		item.setLevels([-50,40])
 	return windows,imageItems
 
-all_windows,all_items = create_plots(channels)
+if(mode == 0):
+	all_windows,all_items = create_spectrograms(channels)
+if(mode == 1):
+	all_plots, all_curves = create_plots(channels)
 
 #Spectrogram Initialization
 #item = pg.ImageItem()
@@ -64,7 +85,8 @@ all_windows,all_items = create_plots(channels)
 #curve = p1.plot(pen='y')
 
 # Initialize the processing stream
-appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5,spectrogramWindow=300)
+#appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5,spectrogramWindow=300)
+appObj = app.DataStream(chunk_size=250,b_times=1,spec_analyse=1,spectrogramWindow=300)
 # The below function will be run by thread t1
 def runApp(count=None):
 	global channels
@@ -81,18 +103,27 @@ time.sleep(0.1)
 
 # Main plotting function
 def update():
-	global channels, all_items
+	global channels, all_items,all_curves
 	# The below 4 lines are for plotting filter_outputs
 	#if(appObj.plot_buffer['spectral_analysis'].shape[0] == appObj.window_size * appObj.spec_analysis):
 	#	curve.setData(appObj.plot_buffer['spectral_analysis']
 	#if appObj.g == 1:
 	#	curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
+	 #The below 4 lines are for plotting filter_outputs
+#	if(appObj.plot_buffer['spectral_analysis'].shape[0] == appObj.window_size * appObj.spec_analysis):
+#		curve.setData(appObj.plot_buffer['spectral_analysis']
+#	if appObj.g == 1:
+#		curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
+	if(mode == 1):	
+		for i in channels:
+			all_curves[i].setData(appObj.plot_buffer['bandpass'][i])
 
-	for i in channels:
-		if(appObj.spec_True[i] == 1):
-			all_items[i].setImage(appObj.plot_buffer['spectrogram'][i][:,:60],autoLevels=False)
-			appObj.spec_True[i] = 0
-	pass
+	if(mode == 0):
+		for i in channels:
+			if(appObj.spec_True[i] == 1):
+				all_items[i].setImage(appObj.plot_buffer['spectrogram'][i][:,:60],autoLevels=False)
+				appObj.spec_True[i] = 0
+		pass
 	
 # PyQTgraph initialization
 
