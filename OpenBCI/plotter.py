@@ -10,7 +10,9 @@ from matplotlib import cm
 import time
 
 a = QtGui.QApplication([])
-channels = [0,1,2,3]
+# Channels to be plotted
+# if only one channel to be plotted , channels = [0]
+channels = [0,1,2,3,4,5,6,7]
 #pos = np.array([0., 1., 0.5, 0.25, 0.75])
 #color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
 pos = np.arange(0,1,1/256.0)
@@ -19,9 +21,14 @@ lut = cmap.getLookupTable(0.0, 1.0, 256)
 colormap = cm.get_cmap('nipy_spectral')
 colormap._init()
 lookup = (colormap._lut * 255).view(np.ndarray)
-print(lookup.shape)
 gb_windows = []
+# mode = 1, plot bandpass
+# mode = 0, plot spectrogram
 mode = 0
+all_plots = []
+all_curves = []
+all_windows = []
+all_items = []
 
 # Test code
 #x = pg.GraphicsWindow()
@@ -30,6 +37,19 @@ mode = 0
 #plot.addItem(item)
 #i.setImage(lut)
 
+
+def create_plots(channels):
+	plots = []
+	curves = []
+	win = pg.GraphicsWindow()
+	gb_windows.append(win)
+	for c in channels:
+		plot = win.addPlot(title="Channel "+str(c))
+		curve = plot.plot()
+		curves.append(curve)
+		plots.append(plot)
+		win.nextRow()
+	return plots, curves	
 
 def create_spectrogram(channels):
 	global pos, color, cmap, lut
@@ -66,19 +86,11 @@ def create_windows(channels):
 		item.setLookupTable(ct.lut_cubehelix)
 	return windows,imageItems
 
-all_windows,all_items = create_spectrogram(channels)
+if mode == 0:
+	all_windows,all_items = create_spectrogram(channels)
+if mode == 1:
+	all_plots, all_curves = create_plots(channels)
 
-
-#Spectrogram Initialization
-#item = pg.ImageItem()
-#p1.addItem(item)
-#item.setLookupTable(lut)
-#item.setLevels([-50,100])
-# The below 4 lines are for plotting filter_outputs
-#p1.setClipToView(True)
-#p1.setRange(xRange=[0,60])
-#view.setRange(yRange=[0,100])
-#curve = p1.plot(pen='y')
 
 # Initialize the processing stream
 appObj = app.DataStream(chunk_size=250,b_times=1,spec_analyse=1,spectrogramWindow=300,NFFT=512)
@@ -99,19 +111,16 @@ time.sleep(0.1)
 # Main plotting function
 def update():
 	global channels, all_items
-	# The below 4 lines are for plotting filter_outputs
-	#if(appObj.plot_buffer['spectral_analysis'].shape[0] == appObj.window_size * appObj.spec_analysis):
-	#	curve.setData(appObj.plot_buffer['spectral_analysis']
-	#if appObj.g == 1:
-	#	curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
+
+	if(mode == 1):
+		for i in channels:
+			all_curves[i].setData(appObj.plot_buffer['bandpass'][i])
 
 	if(mode == 0):
 		for i in channels:
 			if(appObj.spec_True[i] == 1):
 				all_items[i].setImage(appObj.plot_buffer['spectrogram'][i],autoLevels=False)
 				appObj.spec_True[i] = 0
-		pass
-	elif (mode == 1):
 		pass
 	
 # PyQTgraph initialization

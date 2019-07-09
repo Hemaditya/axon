@@ -40,6 +40,7 @@ class DataStream():
 		self.currentChannel = -1
 		self.window_size = chunk_size
 		self.buffer_size = self.chunk_size*b_times
+		self.plot_size = 5
 		self.data_buffer = []
 		self.raw_buffer = {}
 		self.uVolts_per_count = (4.5)/24/(2**23-1)*1000000 # scalar factor to convert raw data into real world signal data
@@ -81,9 +82,9 @@ class DataStream():
 			self.filter_outputs['notch_filter'][i] = np.zeros(shape=(self.buffer_size))
 			self.filter_outputs['bandpass'][i] = np.zeros(shape=(self.buffer_size))
 			self.filter_outputs['spec_analyser'][i] = np.array([])
-			self.plot_buffer['dc_offset'][i] = np.array([])
+			self.plot_buffer['dc_offset'][i] = np.zeros(shape=(self.buffer_size*self.plot_size))
 			self.plot_buffer['notch_filter'][i] = np.array([])
-			self.plot_buffer['bandpass'][i] = np.array([])
+			self.plot_buffer['bandpass'][i] = np.zeros(shape=(self.buffer_size*self.plot_size))
 			self.plot_buffer['spec_analyser'][i] = np.zeros(shape=(self.window_size*self.chunk_size))
 			self.plot_buffer['spec_freqs'][i] = np.zeros(shape=(self.window_size*self.chunk_size))
 			self.plot_buffer['spectrogram'][i] = np.zeros(shape=(spectrogramWindow,self.NFFT/2 + 1))
@@ -130,6 +131,8 @@ class DataStream():
 		#self.plot_buffer['bandpass'] = np.append(self.filter_outputs['bandpass'],bandpassOutput)
 		self.filter_outputs['bandpass'][self.currentChannel][:-self.window_size] = self.filter_outputs['bandpass'][self.currentChannel][self.window_size:]
 		self.filter_outputs['bandpass'][self.currentChannel][-self.window_size:] = bandpassOutput
+		self.plot_buffer['bandpass'][self.currentChannel][:-self.window_size] = self.plot_buffer['bandpass'][self.currentChannel][self.window_size:]
+		self.plot_buffer['bandpass'][self.currentChannel][-self.window_size:] = bandpassOutput
 
 	def remove_dc_offset(self):
 		# This is to Remove The DC Offset By Using High Pass Filters
