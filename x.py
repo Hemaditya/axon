@@ -56,6 +56,8 @@ class SpectrogramWidget(pg.PlotWidget):
         self.img.setLevels([-50,40])
 
         freq = np.arange((CHUNKSZ/2)+1)/(float(CHUNKSZ)/FS)
+        print(freq.shape)
+        x = raw_input()
         yscale = 1.0/(self.img_array.shape[1]/freq[-1])
         self.img.scale((1./FS)*CHUNKSZ, yscale)
 

@@ -4,14 +4,21 @@ import threading
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph import QtCore, QtGui
-import matplotlib.pyplot
+import colot as ct
+from matplotlib import cm
 import time
 
-channels = [0,1]
-pos = np.array([0., 1., 0.5, 0.25, 0.75])
-color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
-cmap = pg.ColorMap(pos, color)
+a = QtGui.QApplication([])
+channels = [0,1,2,3]
+#pos = np.array([0., 1., 0.5, 0.25, 0.75])
+#color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
+pos = np.arange(0,1,1/256.0)
+cmap = pg.ColorMap(pos, ct.lut_cubehelix)
 lut = cmap.getLookupTable(0.0, 1.0, 256)
+colormap = cm.get_cmap('nipy_spectral')
+colormap._init()
+lookup = (colormap._lut * 255).view(np.ndarray)
+print(lookup.shape)
 gb_windows = []
 mode = 0
 
@@ -19,6 +26,7 @@ all_windows = []
 all_items = []
 all_plots = []
 all_curves = []
+
 
 def create_plots(channels):
 	plots = []
@@ -37,17 +45,18 @@ def create_spectrograms(channels):
 	global pos, color, cmap, lut
 	windows = []
 	imageItems = []
-	win = pg.GraphicsWindow(title="Giant Plot")
+	win = pg.GraphicsWindow()
 	gb_windows.append(win)
 	for c in channels:
 		if((c+1)%3 == 0):
 			win.nextRow()
-		plot = win.addPlot(title="Channel "+str(c))	
+		plot = win.addPlot()
 		windows.append(plot)
 		item = pg.ImageItem()
 		imageItems.append(item)
+		item.setLevels([-50,40])
 		windows[-1].addItem(item)
-		item.setLookupTable(lut)
+		item.setLookupTable(lookup)
 		item.setLevels([-50,40])
 	return windows,imageItems
 
@@ -64,14 +73,14 @@ def create_windows(channels):
 		item = pg.ImageItem()
 		imageItems.append(item)
 		windows[-1].addItem(item)
-		item.setLookupTable(lut)
-		item.setLevels([-50,40])
+		item.setLookupTable(ct.lut_cubehelix)
 	return windows,imageItems
 
 if(mode == 0):
 	all_windows,all_items = create_spectrograms(channels)
 if(mode == 1):
 	all_plots, all_curves = create_plots(channels)
+
 
 #Spectrogram Initialization
 #item = pg.ImageItem()
@@ -85,8 +94,7 @@ if(mode == 1):
 #curve = p1.plot(pen='y')
 
 # Initialize the processing stream
-#appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5,spectrogramWindow=300)
-appObj = app.DataStream(chunk_size=250,b_times=1,spec_analyse=1,spectrogramWindow=300)
+appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5,spectrogramWindow=300,NFFT=512)
 # The below function will be run by thread t1
 def runApp(count=None):
 	if(count == None):
