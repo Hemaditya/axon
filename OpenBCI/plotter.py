@@ -5,6 +5,7 @@ import numpy as np
 import pyqtgraph as pg
 from pyqtgraph import QtCore, QtGui
 import colot as ct
+import matplotlib.pyplot as plt
 from matplotlib import cm
 import time
 
@@ -21,6 +22,13 @@ lookup = (colormap._lut * 255).view(np.ndarray)
 print(lookup.shape)
 gb_windows = []
 mode = 0
+
+# Test code
+#x = pg.GraphicsWindow()
+#plot = x.addPlot()
+#i = pg.ImageItem()
+#plot.addItem(item)
+#i.setImage(lut)
 
 
 def create_spectrogram(channels):
@@ -100,7 +108,7 @@ def update():
 	if(mode == 0):
 		for i in channels:
 			if(appObj.spec_True[i] == 1):
-				all_items[i].setImage(appObj.plot_buffer['spectrogram'][i],autoLevels=False,yvals=appObj.plot_buffer['spec_freqs'])
+				all_items[i].setImage(appObj.plot_buffer['spectrogram'][i],autoLevels=False)
 				appObj.spec_True[i] = 0
 		pass
 	elif (mode == 1):
