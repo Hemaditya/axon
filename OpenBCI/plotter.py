@@ -9,7 +9,7 @@ from matplotlib import cm
 import time
 
 a = QtGui.QApplication([])
-channels = [0]
+channels = [0,1,2,3]
 #pos = np.array([0., 1., 0.5, 0.25, 0.75])
 #color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
 pos = np.arange(0,1,1/256.0)
@@ -20,10 +20,10 @@ colormap._init()
 lookup = (colormap._lut * 255).view(np.ndarray)
 print(lookup.shape)
 gb_windows = []
-mode = 1
+mode = 0
 
 
-def create_plots(channels):
+def create_spectrogram(channels):
 	global pos, color, cmap, lut
 	windows = []
 	imageItems = []
@@ -58,7 +58,7 @@ def create_windows(channels):
 		item.setLookupTable(ct.lut_cubehelix)
 	return windows,imageItems
 
-all_windows,all_items = create_plots(channels)
+all_windows,all_items = create_spectrogram(channels)
 
 
 #Spectrogram Initialization
@@ -73,7 +73,7 @@ all_windows,all_items = create_plots(channels)
 #curve = p1.plot(pen='y')
 
 # Initialize the processing stream
-appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5,spectrogramWindow=300,NFFT=512)
+appObj = app.DataStream(chunk_size=250,b_times=1,spec_analyse=1,spectrogramWindow=300,NFFT=512)
 # The below function will be run by thread t1
 def runApp(count=None):
 	global channels
@@ -97,15 +97,14 @@ def update():
 	#if appObj.g == 1:
 	#	curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
 
-	for i in channels:
-		if(appObj.spec_True[i] == 1):
-			#a = {f:appObj.plot_buffer['spec_freqs'][i][f] for f in range(appObj.plot_buffer['spec_freqs'][i].shape[0])}
-			print(appObj.plot_buffer['spec_freqs'].shape)
-			print(np.min(appObj.plot_buffer['spectrogram'][i][-1]))
-			print(np.max(appObj.plot_buffer['spectrogram'][i][-1]))
-			all_items[i].setImage(appObj.plot_buffer['spectrogram'][i],autoLevels=False,yvals=appObj.plot_buffer['spec_freqs'])
-			appObj.spec_True[i] = 0
-	pass
+	if(mode == 0):
+		for i in channels:
+			if(appObj.spec_True[i] == 1):
+				all_items[i].setImage(appObj.plot_buffer['spectrogram'][i],autoLevels=False,yvals=appObj.plot_buffer['spec_freqs'])
+				appObj.spec_True[i] = 0
+		pass
+	elif (mode == 1):
+		pass
 	
 # PyQTgraph initialization
 
