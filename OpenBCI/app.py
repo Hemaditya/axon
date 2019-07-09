@@ -41,7 +41,7 @@ class DataStream():
 		self.prevDC = 0
 		self.buffer_size = self.chunk_size*self.plot_size
 		self.data_buffer = []
-		self.raw_buffer = {}
+		self.raw_buffer = np.zeros(shape=(self.buffer_size))
 		self.uVolts_per_count = (4.5)/24/(2**23-1)*1000000 # scalar factor to convert raw data into real world signal data
 		if(channels == 'all'):
 			self.channels_to_process = [i for i in range(n_channels)]	
@@ -50,12 +50,13 @@ class DataStream():
 		self.filter_outputs = {} # outputs of all filters 
 		self.plot_buffer = {} # The data that needs to be plotted
 		self.spec_analyse = spec_analyse
-		self.spec_True = {} # to flag spectrogram plotting
+		self.spec_True = 0 # to flag spectrogram plotting
 		self.NFFT = NFFT
 		
 		self.prevFilterOutput = np.array([])
 		# Plotting and filter buffers
 		# Initialization of filter_outputs 
+<<<<<<< HEAD
 		self.filter_outputs['dc_offset'] = {}
 		self.filter_outputs['notch_filter'] = {}
 		self.filter_outputs['bandpass'] = {}
@@ -80,6 +81,19 @@ class DataStream():
 			self.plot_buffer['spec_analyser'][i] = np.zeros(shape=(self.buffer_size))
 			self.plot_buffer['spec_freqs'][i] = np.zeros(shape=(self.buffer_size))
 			self.plot_buffer['spectrogram'][i] = np.zeros(shape=(spectrogramWindow,self.NFFT/2 + 1))
+=======
+		self.filter_outputs['dc_offset'] = np.zeros(shape=(self.buffer_size))
+		self.filter_outputs['notch_filter'] = np.zeros(shape=(self.buffer_size))
+		self.filter_outputs['bandpass'] = np.zeros(shape=(self.buffer_size))
+		self.filter_outputs['spec_analyser'] = np.array([])
+		self.plot_buffer['dc_offset'] = np.array([])
+		self.plot_buffer['notch_filter'] = np.array([])
+		self.g = 0
+		self.plot_buffer['bandpass'] = np.array([])
+		self.plot_buffer['spec_analyser'] = np.zeros(shape=(self.window_size*self.chunk_size))
+		self.plot_buffer['spec_freqs'] = np.zeros(shape=(self.window_size*self.chunk_size))
+		self.plot_buffer['spectrogram'] = np.zeros(shape=(spectrogramWindow,self.NFFT/2 + 1))
+>>>>>>> parent of 6e67dfc... All 8 channels plotting
 
 	def read_chunk(self,n_chunks=1):
 		# n_chunks = number of chunks to read. Keep it 1 for live data
@@ -103,16 +117,20 @@ class DataStream():
 		for freq_Hz in np.nditer(notch_freq_Hz):  # loop over each target freq
 			bp_stop_Hz = freq_Hz + 3.0*np.array([-1, 1])  # set the stop band
 			b, a = signal.butter(3, bp_stop_Hz/(250 / 2.0), 'bandstop')
+<<<<<<< HEAD
 #<<<<<<< HEAD
 #			
 #			notchOutput,self.stateNotch	= signal.lfilter(b, a, self.filter_outputs['dc_offset'][self.currentChannel], zi=self.stateNotch)[-self.window_size:]
 #=======
+=======
+>>>>>>> parent of 6e67dfc... All 8 channels plotting
 			notchOutput	= signal.lfilter(b, a, self.filter_outputs['dc_offset'], 0)[-self.window_size:]
 			#self.plot_buffer['notch_filter'] = np.append(self.filter_outputs['notch_filter'],notchOutput)
 			# A = [6,7,8,9,1,2,3,4] = [7,8,9,1,2,3,4,4]
 			# A[last value] = notchOutput
 			# A[:num] = all values from start till index num
 			# A[:-num] = all values from start to index num from the revers
+<<<<<<< HEAD
 #<<<<<<< HEAD
 ##<<<<<<< HEAD
 			self.filter_outputs['notch_filter'][self.currentChannel][:-self.window_size] = self.filter_outputs['notch_filter'][self.currentChannel][self.window_size:]
@@ -124,6 +142,10 @@ class DataStream():
 #			self.plot_buffer['notch_filter'][self.currentChannel][:-self.window_size] = self.plot_buffer['notch_filter'][self.currentChannel][self.window_size:]
 #			self.plot_buffer['notch_filter'][self.currentChannel][-self.window_size:] = notchOutput
 #=======
+=======
+			self.filter_outputs['notch_filter'][:-self.window_size] = self.filter_outputs['notch_filter'][self.window_size:]
+			self.filter_outputs['notch_filter'][-self.window_size:] = notchOutput
+>>>>>>> parent of 6e67dfc... All 8 channels plotting
 
 	def bandpass(self):
 		# This is to allow the band of signal to pass with start frequency and stop frequency
@@ -133,7 +155,11 @@ class DataStream():
 		bp_Hz = np.zeros(0)
 		bp_Hz = np.array([start,stop])
 		b, a = signal.butter(3, bp_Hz/(250 / 2.0),'bandpass')
+<<<<<<< HEAD
 		bandpassOutput = signal.lfilter(b, a, self.filter_outputs['dc_offset'][self.currentChannel], 0)[-self.window_size:]
+=======
+		bandpassOutput = signal.lfilter(b, a, self.filter_outputs['notch_filter'], 0)[-self.window_size:]
+>>>>>>> parent of 6e67dfc... All 8 channels plotting
 		#self.plot_buffer['bandpass'] = np.append(self.filter_outputs['bandpass'],bandpassOutput)
 		self.filter_outputs['bandpass'][:-self.window_size] = self.filter_outputs['bandpass'][self.window_size:]
 		self.filter_outputs['bandpass'][-self.window_size:] = bandpassOutput
@@ -188,6 +214,10 @@ class DataStream():
 				# handle spec analyser
 				self.filter_outputs['spec_analyser'] = np.append(self.filter_outputs['spec_analyser'], self.filter_outputs['bandpass'][-self.window_size:])
 				if(self.filter_outputs['spec_analyser'].reshape(-1).shape[0] == self.window_size*self.spec_analyse):
+<<<<<<< HEAD
+=======
+					self.g= 1
+>>>>>>> parent of 6e67dfc... All 8 channels plotting
 					self.get_spectrum_data()
 					self.filter_outputs['spec_analyser'] = np.array([])
 						
