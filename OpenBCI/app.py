@@ -117,7 +117,7 @@ class DataStream():
 		bp_Hz = np.zeros(0)
 		bp_Hz = np.array([start,stop])
 		b, a = signal.butter(3, bp_Hz/(250 / 2.0),'bandpass')
-		bandpassOutput = signal.lfilter(b, a, self.filter_outputs['notch_filter'][self.currentChannel], 0)[-self.window_size:]
+		bandpassOutput = signal.lfilter(b, a, self.filter_outputs['dc_offset'][self.currentChannel], 0)[-self.window_size:]
 		#self.plot_buffer['bandpass'] = np.append(self.filter_outputs['bandpass'],bandpassOutput)
 		self.filter_outputs['bandpass'][self.currentChannel][:-self.window_size] = self.filter_outputs['bandpass'][self.currentChannel][self.window_size:]
 		self.filter_outputs['bandpass'][self.currentChannel][-self.window_size:] = bandpassOutput
@@ -166,7 +166,7 @@ class DataStream():
 				# remove the dc offset from the raw_buffer data
 				self.remove_dc_offset()
 				#apply notch_filter
-				self.notch_filter()
+				#self.notch_filter()
 				#apply bandpass
 				self.bandpass()
 				# handle spec analyser
