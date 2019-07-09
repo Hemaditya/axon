@@ -8,9 +8,7 @@ import colot as ct
 from matplotlib import cm
 import time
 
-<<<<<<< HEAD
-a = QtGui.QApplication([])
-channels = [0,1,2,3]
+channels = [0]
 #pos = np.array([0., 1., 0.5, 0.25, 0.75])
 #color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
 pos = np.arange(0,1,1/256.0)
@@ -57,7 +55,7 @@ def create_spectrograms(channels):
 		imageItems.append(item)
 		item.setLevels([-50,40])
 		windows[-1].addItem(item)
-		item.setLookupTable(lookup)
+		item.setLookupTable(lut)
 		item.setLevels([-50,40])
 	return windows,imageItems
 
@@ -88,26 +86,6 @@ if(mode == 1):
 #p1.addItem(item)
 #item.setLookupTable(lut)
 #item.setLevels([-50,100])
-=======
-
-win = pg.GraphicsWindow(title='Plot')
-win.resize(1000,600)
-p1 = win.addPlot()
-win.nextRow()
-p2 = win.addPlot()
-p3 = win.addPlot()
-win.nextRow()
-p4 = win.addPlot()
-#Spectrogram Initialization
-pos = np.array([0., 1., 0.5, 0.25, 0.75])
-color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
-cmap = pg.ColorMap(pos, color)
-lut = cmap.getLookupTable(0.0, 1.0, 256)
-item = pg.ImageItem()
-p1.addItem(item)
-item.setLookupTable(lut)
-item.setLevels([-50,100])
->>>>>>> parent of 6e67dfc... All 8 channels plotting
 # The below 4 lines are for plotting filter_outputs
 #p1.setClipToView(True)
 #p1.setRange(xRange=[0,60])
@@ -131,10 +109,7 @@ time.sleep(0.1)
 
 # Main plotting function
 def update():
-<<<<<<< HEAD
 	global channels, all_items,all_curves
-=======
->>>>>>> parent of 6e67dfc... All 8 channels plotting
 	# The below 4 lines are for plotting filter_outputs
 	#if(appObj.plot_buffer['spectral_analysis'].shape[0] == appObj.window_size * appObj.spec_analysis):
 	#	curve.setData(appObj.plot_buffer['spectral_analysis']
@@ -149,21 +124,12 @@ def update():
 		for i in channels:
 			all_curves[i].setData(appObj.plot_buffer['bandpass'][i])
 
-<<<<<<< HEAD
 	if(mode == 0):
 		for i in channels:
 			if(appObj.spec_True[i] == 1):
-				all_items[i].setImage(appObj.plot_buffer['spectrogram'][i][:,:60],autoLevels=False)
+				all_items[i].setImage(appObj.plot_buffer['spectrogram'][i],autoLevels=False)
 				appObj.spec_True[i] = 0
 		pass
-=======
-	if(appObj.spec_True == 1):
-		print(np.min(appObj.plot_buffer['spectrogram'][-1]))
-		print(np.max(appObj.plot_buffer['spectrogram'][-1]))
-		item.setImage(appObj.plot_buffer['spectrogram'][:,:60],autoLevels=False)
-		appObj.spec_True = 0
-	pass
->>>>>>> parent of 6e67dfc... All 8 channels plotting
 	
 # PyQTgraph initialization
 
