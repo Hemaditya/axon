@@ -30,16 +30,16 @@ class DataStream():
 		else:
 			self.port = port
 		self.daisy = daisy
+		self.Zstate = {}
+		self.Zstate['notch'] = {}
+		self.Zstate['dc_offset'] = {}
+		self.Zstate['bandpass'] = {}
 		self.n_channels=n_channels
 		self.stream = p.OpenBCICyton(self.port,self.daisy)
 		self.chunk_size = chunk_size
 		self.window_size = chunk_size
-		self.stateBand = [0,0,0,0,0,0]
-		self.plot_size = 10
-		self.state = [0,0]
-		self.stateNotch = [0,0,0,0,0,0]
-		self.prevDC = 0
-		self.buffer_size = self.chunk_size*self.plot_size
+		self.buffer_size = self.chunk_size*b_times
+		self.plot_size = 5
 		self.data_buffer = []
 		self.raw_buffer = {}
 		self.uVolts_per_count = (4.5)/24/(2**23-1)*1000000 # scalar factor to convert raw data into real world signal data
@@ -66,6 +66,11 @@ class DataStream():
 		self.plot_buffer['spec_analyser'] = {}
 		self.plot_buffer['spec_freqs'] = {}
 		self.plot_buffer['spectrogram'] = {}
+		# Initialize states
+		for i in range(self.n_channels):
+			self.Zstate['notch'][i] = [0,0,0,0,0,0]
+			self.Zstate['dc_offset'][i] = [0,0]
+			self.Zstate['bandpass'][i] = [0,0,0,0,0,0]
 		# First create 8 channels for all buffers
 		for i in range(self.n_channels):
 			self.spec_True[i] = 0
@@ -74,11 +79,11 @@ class DataStream():
 			self.filter_outputs['notch_filter'][i] = np.zeros(shape=(self.window_size))
 			self.filter_outputs['bandpass'][i] = np.zeros(shape=(self.window_size))
 			self.filter_outputs['spec_analyser'][i] = np.array([])
-			self.plot_buffer['dc_offset'][i] = np.zeros(shape=(self.buffer_size))
-			self.plot_buffer['notch_filter'][i] = np.zeros(shape=(self.buffer_size))
-			self.plot_buffer['bandpass'][i] = np.zeros(shape=(self.buffer_size))
-			self.plot_buffer['spec_analyser'][i] = np.zeros(shape=(self.buffer_size))
-			self.plot_buffer['spec_freqs'][i] = np.zeros(shape=(self.buffer_size))
+			self.plot_buffer['dc_offset'][i] = np.zeros(shape=(self.buffer_size*self.plot_size))
+			self.plot_buffer['notch_filter'][i] = np.array([])
+			self.plot_buffer['bandpass'][i] = np.zeros(shape=(self.buffer_size*self.plot_size))
+			self.plot_buffer['spec_analyser'][i] = np.zeros(shape=(self.window_size*self.chunk_size))
+			self.plot_buffer['spec_freqs'][i] = np.zeros(shape=(self.window_size*self.chunk_size))
 			self.plot_buffer['spectrogram'][i] = np.zeros(shape=(spectrogramWindow,self.NFFT/2 + 1))
 
 	def read_chunk(self,n_chunks=1):
@@ -103,7 +108,7 @@ class DataStream():
 		for freq_Hz in np.nditer(notch_freq_Hz):  # loop over each target freq
 			bp_stop_Hz = freq_Hz + 3.0*np.array([-1, 1])  # set the stop band
 			b, a = signal.butter(3, bp_stop_Hz/(250 / 2.0), 'bandstop')
-			notchOutput	= signal.lfilter(b, a, self.filter_outputs['dc_offset'], 0)[-self.window_size:]
+			notchOutput, self.Zstate['notch'][self.currentChannel]= signal.lfilter(b, a, self.filter_outputs['dc_offset'][self.currentChannel], zi=self.Zstate['notch'][self.currentChannel])[-self.window_size:]
 			#self.plot_buffer['notch_filter'] = np.append(self.filter_outputs['notch_filter'],notchOutput)
 			# A = [6,7,8,9,1,2,3,4] = [7,8,9,1,2,3,4,4]
 			# A[last value] = notchOutput
@@ -120,15 +125,18 @@ class DataStream():
 		bp_Hz = np.zeros(0)
 		bp_Hz = np.array([start,stop])
 		b, a = signal.butter(3, bp_Hz/(250 / 2.0),'bandpass')
-		bandpassOutput = signal.lfilter(b, a, self.filter_outputs['dc_offset'][self.currentChannel], 0)[-self.window_size:]
+		bandpassOutput, self.Zstate['bandpass'][self.currentChannel]= signal.lfilter(b, a, self.filter_outputs['notch_filter'][self.currentChannel], zi=self.Zstate['bandpass'][self.currentChannel])[-self.window_size:]
+		#self.plot_buffer['bandpass'] = np.append(self.filter_outputs['bandpass'],bandpassOutput)
 		self.filter_outputs['bandpass'][self.currentChannel][:-self.window_size] = self.filter_outputs['bandpass'][self.currentChannel][self.window_size:]
 		self.filter_outputs['bandpass'][self.currentChannel][-self.window_size:] = bandpassOutput
+		self.plot_buffer['bandpass'][self.currentChannel][:-self.window_size] = self.plot_buffer['bandpass'][self.currentChannel][self.window_size:]
+		self.plot_buffer['bandpass'][self.currentChannel][-self.window_size:] = bandpassOutput
 
 	def remove_dc_offset(self):
 		# This is to Remove The DC Offset By Using High Pass Filters
 		hp_cutoff_Hz = 1.0 # cuttoff freq of 1 Hz (from 0-1Hz all the freqs at attenuated)
 		b, a = signal.butter(2, hp_cutoff_Hz/(250 / 2.0), 'highpass')
-		dcOutput = signal.lfilter(b, a, self.raw_buffer[self.currentChannel], 0)[-self.window_size:]
+		dcOutput, self.Zstate['dc_offset'][self.currentChannel] = signal.lfilter(b, a, self.raw_buffer[self.currentChannel], zi=self.Zstate['dc_offset'][self.currentChannel])[-self.window_size:]
 		self.filter_outputs['dc_offset'][self.currentChannel][:-self.window_size] = self.filter_outputs['dc_offset'][self.currentChannel][self.window_size:]
 		self.filter_outputs['dc_offset'][self.currentChannel][-self.window_size:] = dcOutput
 
@@ -168,7 +176,7 @@ class DataStream():
 				# remove the dc offset from the raw_buffer data
 				self.remove_dc_offset()
 				#apply notch_filter
-				#self.notch_filter()
+				self.notch_filter()
 				#apply bandpass
 				self.bandpass()
 				# handle spec analyser

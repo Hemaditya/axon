@@ -5,10 +5,14 @@ import numpy as np
 import pyqtgraph as pg
 from pyqtgraph import QtCore, QtGui
 import colot as ct
+import matplotlib.pyplot as plt
 from matplotlib import cm
 import time
 
-channels = [0]
+a = QtGui.QApplication([])
+# Channels to be plotted
+# if only one channel to be plotted , channels = [0]
+channels = [0,1,2,3,4,5,6,7]
 #pos = np.array([0., 1., 0.5, 0.25, 0.75])
 #color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
 pos = np.arange(0,1,1/256.0)
@@ -17,30 +21,36 @@ lut = cmap.getLookupTable(0.0, 1.0, 256)
 colormap = cm.get_cmap('nipy_spectral')
 colormap._init()
 lookup = (colormap._lut * 255).view(np.ndarray)
-print(lookup.shape)
 gb_windows = []
-mode = 0
-
-all_windows = []
-all_items = []
+# mode = 1, plot bandpass
+# mode = 0, plot spectrogram
+mode = 1
 all_plots = []
 all_curves = []
+all_windows = []
+all_items = []
 
+# Test code
+#x = pg.GraphicsWindow()
+#plot = x.addPlot()
+#i = pg.ImageItem()
+#plot.addItem(item)
+#i.setImage(lut)
 
 def create_plots(channels):
 	plots = []
 	curves = []
-	win = pg.GraphicsWindow(title="Bandpass")
+	win = pg.GraphicsWindow()
 	gb_windows.append(win)
 	for c in channels:
 		plot = win.addPlot(title="Channel "+str(c))
-		plots.append(plot)
-		curve = plots[-1].plot()
+		curve = plot.plot()
 		curves.append(curve)
+		plots.append(plot)
 		win.nextRow()
-	return plots, curves
+	return plots, curves	
 
-def create_spectrograms(channels):
+def create_spectrogram(channels):
 	global pos, color, cmap, lut
 	windows = []
 	imageItems = []
@@ -75,31 +85,20 @@ def create_windows(channels):
 		item.setLookupTable(ct.lut_cubehelix)
 	return windows,imageItems
 
-if(mode == 0):
-	all_windows,all_items = create_spectrograms(channels)
-if(mode == 1):
+if mode == 0:
+	all_windows,all_items = create_spectrogram(channels)
+if mode == 1:
 	all_plots, all_curves = create_plots(channels)
 
 
-#Spectrogram Initialization
-#item = pg.ImageItem()
-#p1.addItem(item)
-#item.setLookupTable(lut)
-#item.setLevels([-50,100])
-# The below 4 lines are for plotting filter_outputs
-#p1.setClipToView(True)
-#p1.setRange(xRange=[0,60])
-#view.setRange(yRange=[0,100])
-#curve = p1.plot(pen='y')
-
 # Initialize the processing stream
-appObj = app.DataStream(chunk_size=50,b_times=8,spec_analyse=5,spectrogramWindow=300,NFFT=512)
+appObj = app.DataStream(chunk_size=250,b_times=1,spec_analyse=1,spectrogramWindow=300,NFFT=512)
 # The below function will be run by thread t1
 def runApp(count=None):
 	if(count == None):
 		while(True):
 			appObj.read_chunk()
-			appObj.process_raw()
+			appObj.process_raw(channels=channels)
 
 
 # A thread to start processing of data
@@ -109,18 +108,9 @@ time.sleep(0.1)
 
 # Main plotting function
 def update():
-	global channels, all_items,all_curves
-	# The below 4 lines are for plotting filter_outputs
-	#if(appObj.plot_buffer['spectral_analysis'].shape[0] == appObj.window_size * appObj.spec_analysis):
-	#	curve.setData(appObj.plot_buffer['spectral_analysis']
-	#if appObj.g == 1:
-	#	curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
-	 #The below 4 lines are for plotting filter_outputs
-#	if(appObj.plot_buffer['spectral_analysis'].shape[0] == appObj.window_size * appObj.spec_analysis):
-#		curve.setData(appObj.plot_buffer['spectral_analysis']
-#	if appObj.g == 1:
-#		curve.setData(appObj.plot_buffer['spec_freqs'],appObj.plot_buffer['spec_analyser'])
-	if(mode == 1):	
+	global channels, all_items
+
+	if(mode == 1):
 		for i in channels:
 			all_curves[i].setData(appObj.plot_buffer['bandpass'][i])
 
