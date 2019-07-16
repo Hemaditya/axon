@@ -23,9 +23,10 @@ colormap = cm.get_cmap('nipy_spectral')
 colormap._init()
 lookup = (colormap._lut * 255).view(np.ndarray)
 gb_windows = []
-# mode = 1, plot bandpass
+# mode = 1, plot bandpassA
 # mode = 0, plot spectrogram
-mode = 0
+# mode = 2, spectrum plot
+mode = 1
 all_plots = []
 all_curves = []
 all_windows = []
@@ -47,8 +48,8 @@ def create_plots(channels, bandpass=False):
 	for c in channels:
 		plot = win.addPlot(title="Channel "+str(c))
 		if(bandpass == True):
-			plot.setLogMode(True,False)
-			plot.setRange(yRange=[-50,40])
+			plot.setLogMode(False,False)
+			#plot.setRange(yRange=[-50,40])
 		curve = plot.plot()
 		curves.append(curve)
 		plots.append(plot)
@@ -112,15 +113,15 @@ def runApp(count=None):
 					appObj.actionVariables['EYE_BLINK'] = 0
 				appObj.read_chunk()
 				appObj.process_raw(channels=channels)
-				x = appObj.record_buffer['EYE_BLINK'][appObj.currentChannel][-1][0]
-				y = appObj.record_buffer['EYE_BLINK'][appObj.currentChannel][-2][0]
-				dot = np.sum(np.dot(x,y))
-				print(dot)
-				sqrt1 = math.sqrt(np.sum(np.dot(x,x)))
-				sqrt2 = math.sqrt(np.sum(np.dot(y,y)))
-				cos = math.acos(dot/(sqrt1*sqrt2))
-				print("The distance bewteen previous two data: ",np.linalg.norm(x-y))
-
+#				x = appObj.record_buffer['EYE_BLINK'][appObj.currentChannel][-1][0]
+#				y = appObj.record_buffer['EYE_BLINK'][appObj.currentChannel][-2][0]
+#				dot = np.sum(np.dot(x,y))
+#				print(dot)
+#				sqrt1 = math.sqrt(np.sum(np.dot(x,x)))
+#				sqrt2 = math.sqrt(np.sum(np.dot(y,y)))
+#				cos = math.acos(dot/(sqrt1*sqrt2))
+#				print("The distance bewteen previous two data: ",np.linalg.norm(x-y))
+#
 
 
 # A thread to start processing of data
@@ -137,14 +138,15 @@ def update():
 			if(appObj.spec_True[i] == 1):
 				freqsIndices = np.argwhere(appObj.plot_buffer['spec_freqs'][i] <= 60)
 				freqs = appObj.plot_buffer['spec_freqs'][i][freqsIndices].reshape(-1)
-				amp = appObj.plot_buffer['spectrum'][i][freqsIndices].reshape(-1)
-				
-				all_curves[i].setData(freqs,amp)
+				#amp = appObj.plot_buffer['spectrum'][i][freqsIndices].reshape(-1)
+				amp = appObj.plot_buffer['spectrum'][i].reshape(-1)
+				print(amp)	
+				all_curves[i].setData(amp)
 				appObj.spec_True[i] = 0
 
 	if(mode == 1):
 		for i in channels:
-			all_curves[i].setData(appObj.plot_buffer['bandpass'][i])
+			all_curves[i].setData(appObj.plot_buffer['notch_filter'][i])
 
 	if(mode == 0):
 		for i in channels:
@@ -158,7 +160,7 @@ def update():
 
 timer = QtCore.QTimer()
 timer.timeout.connect(update)
-timer.start(1)
+timer.start(500)
 
 if __name__ == '__main__':
 	import sys
@@ -166,3 +168,4 @@ if __name__ == '__main__':
 		QtGui.QApplication.instance().exec_()
 
 t1.join()
+appObj.file.close()

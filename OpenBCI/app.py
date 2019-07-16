@@ -7,6 +7,7 @@ import numpy as np # for operations on buffers
 import matplotlib.pyplot as plt # to ppppppppplot
 import scipy.signal as signal # to signal
 from scipy.fftpack import fft
+import csv
 from matplotlib import mlab
 
 class DataStream():
@@ -32,6 +33,8 @@ class DataStream():
 		self.daisy = daisy
 		self.actionVariables = {}
 		self.actionVariables['EYE_BLINK'] = 0
+		self.file = open('16July_data','w')
+		self.csvfile = csv.writer(self.file)
 		self.Zstate = {}
 		self.Zstate['notch'] = {}
 		self.Zstate['dc_offset'] = {}
@@ -70,6 +73,7 @@ class DataStream():
 		self.plot_buffer['spectrum'] = {}
 		self.plot_buffer['spectrogram'] = {}
 		self.plot_buffer['spectrogram_last'] = {}
+		self.plot_buffer['spectrum_without_bandpass'] = {}
 		# Buffers to record data to feed into ML algos
 		self.record_buffer = {}
 		self.record_buffer['EYE_BLINK'] = {}
@@ -87,7 +91,7 @@ class DataStream():
 			self.filter_outputs['bandpass'][i] = np.zeros(shape=(self.window_size))
 			self.filter_outputs['spec_analyser'][i] = np.array([])
 			self.plot_buffer['dc_offset'][i] = np.zeros(shape=(self.buffer_size*self.plot_size))
-			self.plot_buffer['notch_filter'][i] = np.array([])
+			self.plot_buffer['notch_filter'][i] = np.zeros(shape=(self.buffer_size*self.plot_size))
 			self.plot_buffer['bandpass'][i] = np.zeros(shape=(self.buffer_size*self.plot_size))
 			self.plot_buffer['spec_analyser'][i] = np.zeros(shape=(self.window_size*self.chunk_size))
 			self.plot_buffer['spectrum'][i] = np.array([]) 
@@ -101,7 +105,9 @@ class DataStream():
 		# n_chunks = number of chunks to read. Keep it 1 for live data
 		all_chunks = []
 		for i in range(n_chunks):
-			all_chunks.append(self.stream.start_stream(self.chunk_size))
+			k = self.stream.start_stream(self.chunk_size) 
+			self.csvfile.writerow(k)
+			all_chunks.append(k)
 		self.data_buffer = np.array(all_chunks)*self.uVolts_per_count
 		#self.plot_buffer['raw_data'] = self.data_buffer
 
@@ -127,6 +133,8 @@ class DataStream():
 			# A[:-num] = all values from start to index num from the revers
 			self.filter_outputs['notch_filter'][self.currentChannel][:-self.window_size] = self.filter_outputs['notch_filter'][self.currentChannel][self.window_size:]
 			self.filter_outputs['notch_filter'][self.currentChannel][-self.window_size:] = notchOutput
+			self.plot_buffer['notch_filter'][self.currentChannel][:-self.window_size] = self.plot_buffer['notch_filter'][self.currentChannel][self.window_size:]
+			self.plot_buffer['notch_filter'][self.currentChannel][-self.window_size:] = notchOutput
 
 	def bandpass(self):
 		# This is to allow the band of signal to pass with start frequency and stop frequency
@@ -144,7 +152,7 @@ class DataStream():
 		self.plot_buffer['bandpass'][self.currentChannel][-self.window_size:] = bandpassOutput
 
 	def remove_dc_offset(self):
-		# This is to Remove The DC Offset By Using High Pass Filters
+	# This is to Remove The DC Offset By Using High Pass Filters
 		hp_cutoff_Hz = 1.0 # cuttoff freq of 1 Hz (from 0-1Hz all the freqs at attenuated)
 		b, a = signal.butter(2, hp_cutoff_Hz/(250 / 2.0), 'highpass')
 		dcOutput, self.Zstate['dc_offset'][self.currentChannel] = signal.lfilter(b, a, self.raw_buffer[self.currentChannel], zi=self.Zstate['dc_offset'][self.currentChannel])[-self.window_size:]
@@ -175,6 +183,13 @@ class DataStream():
 		self.plot_buffer['spectrogram_last'][self.currentChannel][-1] = 10*np.log10(spec_PSDperBin).reshape(-1)
 		self.spec_True[self.currentChannel] = 1
 
+	def pure_fft(self):
+		# This function takes input, the output of notch filter and generates FFT for it
+		fftOutput = abs(np.fft.fft(self.filter_outputs['spec_analyser'][self.currentChannel], n=self.NFFT))
+		fftOutput = fftOutput/np.max(fftOutput)
+		self.plot_buffer['spectrum'][self.currentChannel] = fftOutput
+		self.spec_True[self.currentChannel] = 1
+
 	def process_raw(self,channels=[0],meth='live'):
 		if(channels=='all'):
 			self.channels_to_process = [i+1 for i in range(self.n_channels)]
@@ -195,9 +210,10 @@ class DataStream():
 				#apply bandpass
 				self.bandpass()
 				# handle spec analyser
-				self.filter_outputs['spec_analyser'][self.currentChannel] = np.append(self.filter_outputs['spec_analyser'][self.currentChannel], self.filter_outputs['bandpass'][self.currentChannel][-self.window_size:])
+				self.filter_outputs['spec_analyser'][self.currentChannel] = np.append(self.filter_outputs['spec_analyser'][self.currentChannel], self.filter_outputs['notch_filter'][self.currentChannel][-self.window_size:])
 				if(self.filter_outputs['spec_analyser'][self.currentChannel].reshape(-1).shape[0] == self.window_size*self.spec_analyse):
-					self.get_spectrum_data()
+					#self.get_spectrum_data()
+					self.pure_fft()
 					self.filter_outputs['spec_analyser'][self.currentChannel] = np.array([])
 						
 
