@@ -8,11 +8,12 @@ import colot as ct
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import time
+import math
 
 a = QtGui.QApplication([])
 # Channels to be plotted
 # if only one channel to be plotted , channels = [0]
-channels = [0,1,2,3,4,5,6,7]
+channels = [0]
 #pos = np.array([0., 1., 0.5, 0.25, 0.75])
 #color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
 pos = np.arange(0,1,1/256.0)
@@ -24,7 +25,7 @@ lookup = (colormap._lut * 255).view(np.ndarray)
 gb_windows = []
 # mode = 1, plot bandpass
 # mode = 0, plot spectrogram
-mode = 1
+mode = 0
 all_plots = []
 all_curves = []
 all_windows = []
@@ -37,13 +38,17 @@ all_items = []
 #plot.addItem(item)
 #i.setImage(lut)
 
-def create_plots(channels):
+
+def create_plots(channels, bandpass=False):
 	plots = []
 	curves = []
 	win = pg.GraphicsWindow()
 	gb_windows.append(win)
 	for c in channels:
 		plot = win.addPlot(title="Channel "+str(c))
+		if(bandpass == True):
+			plot.setLogMode(True,False)
+			plot.setRange(yRange=[-50,40])
 		curve = plot.plot()
 		curves.append(curve)
 		plots.append(plot)
@@ -65,7 +70,7 @@ def create_spectrogram(channels):
 		imageItems.append(item)
 		item.setLevels([-50,40])
 		windows[-1].addItem(item)
-		item.setLookupTable(lut)
+		item.setLookupTable(lookup)
 		item.setLevels([-50,40])
 	return windows,imageItems
 
@@ -87,18 +92,35 @@ def create_windows(channels):
 
 if mode == 0:
 	all_windows,all_items = create_spectrogram(channels)
-if mode == 1:
-	all_plots, all_curves = create_plots(channels)
+if mode == 1 or mode == 2:
+	all_plots, all_curves = create_plots(channels,bandpass=True)
 
 
 # Initialize the processing stream
-appObj = app.DataStream(chunk_size=250,b_times=1,spec_analyse=1,spectrogramWindow=300,NFFT=512)
+appObj = app.DataStream(chunk_size=125,b_times=1,spec_analyse=1,spectrogramWindow=100,NFFT=256)
 # The below function will be run by thread t1
 def runApp(count=None):
 	if(count == None):
 		while(True):
-			appObj.read_chunk()
-			appObj.process_raw(channels=channels)
+			x = 'y'
+			if(x.lower() != 'y' and x.lower() != 'n'):
+				print("Enter proper value")
+			else:
+				if(x.lower() == 'y'):
+					appObj.actionVariables['EYE_BLINK'] = 1
+				if(x.lower() == 'n'):
+					appObj.actionVariables['EYE_BLINK'] = 0
+				appObj.read_chunk()
+				appObj.process_raw(channels=channels)
+				x = appObj.record_buffer['EYE_BLINK'][appObj.currentChannel][-1][0]
+				y = appObj.record_buffer['EYE_BLINK'][appObj.currentChannel][-2][0]
+				dot = np.sum(np.dot(x,y))
+				print(dot)
+				sqrt1 = math.sqrt(np.sum(np.dot(x,x)))
+				sqrt2 = math.sqrt(np.sum(np.dot(y,y)))
+				cos = math.acos(dot/(sqrt1*sqrt2))
+				print("The distance bewteen previous two data: ",np.linalg.norm(x-y))
+
 
 
 # A thread to start processing of data
@@ -110,6 +132,16 @@ time.sleep(0.1)
 def update():
 	global channels, all_items
 
+	if(mode == 2):
+		for i in channels:
+			if(appObj.spec_True[i] == 1):
+				freqsIndices = np.argwhere(appObj.plot_buffer['spec_freqs'][i] <= 60)
+				freqs = appObj.plot_buffer['spec_freqs'][i][freqsIndices].reshape(-1)
+				amp = appObj.plot_buffer['spectrum'][i][freqsIndices].reshape(-1)
+				
+				all_curves[i].setData(freqs,amp)
+				appObj.spec_True[i] = 0
+
 	if(mode == 1):
 		for i in channels:
 			all_curves[i].setData(appObj.plot_buffer['bandpass'][i])
@@ -117,7 +149,8 @@ def update():
 	if(mode == 0):
 		for i in channels:
 			if(appObj.spec_True[i] == 1):
-				all_items[i].setImage(appObj.plot_buffer['spectrogram'][i],autoLevels=False)
+				print(appObj.plot_buffer['spec_freqs'][i].shape)
+				all_items[i].setImage(appObj.plot_buffer['spectrogram_last'][i],autoLevels=False)
 				appObj.spec_True[i] = 0
 		pass
 	

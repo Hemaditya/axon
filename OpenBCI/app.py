@@ -30,6 +30,8 @@ class DataStream():
 		else:
 			self.port = port
 		self.daisy = daisy
+		self.actionVariables = {}
+		self.actionVariables['EYE_BLINK'] = 0
 		self.Zstate = {}
 		self.Zstate['notch'] = {}
 		self.Zstate['dc_offset'] = {}
@@ -65,7 +67,12 @@ class DataStream():
 		self.plot_buffer['bandpass'] = {}
 		self.plot_buffer['spec_analyser'] = {}
 		self.plot_buffer['spec_freqs'] = {}
+		self.plot_buffer['spectrum'] = {}
 		self.plot_buffer['spectrogram'] = {}
+		self.plot_buffer['spectrogram_last'] = {}
+		# Buffers to record data to feed into ML algos
+		self.record_buffer = {}
+		self.record_buffer['EYE_BLINK'] = {}
 		# Initialize states
 		for i in range(self.n_channels):
 			self.Zstate['notch'][i] = [0,0,0,0,0,0]
@@ -83,8 +90,12 @@ class DataStream():
 			self.plot_buffer['notch_filter'][i] = np.array([])
 			self.plot_buffer['bandpass'][i] = np.zeros(shape=(self.buffer_size*self.plot_size))
 			self.plot_buffer['spec_analyser'][i] = np.zeros(shape=(self.window_size*self.chunk_size))
+			self.plot_buffer['spectrum'][i] = np.array([]) 
 			self.plot_buffer['spec_freqs'][i] = np.zeros(shape=(self.window_size*self.chunk_size))
 			self.plot_buffer['spectrogram'][i] = np.zeros(shape=(spectrogramWindow,self.NFFT/2 + 1))
+			self.plot_buffer['spectrogram_last'][i] = np.zeros(shape=(spectrogramWindow,self.NFFT/2 + 1))
+
+			self.record_buffer['EYE_BLINK'][i] = [np.zeros(self.NFFT/2+1)]
 
 	def read_chunk(self,n_chunks=1):
 		# n_chunks = number of chunks to read. Keep it 1 for live data
@@ -152,12 +163,16 @@ class DataStream():
 									   ) # returns PSD power per Hz
 		spectrum_PSDperHz = np.mean(spec_PSDperHz,1)
 		#self.plot_buffer['spec_analyser'] = np.copy(10*np.log10(spectrum_PSDperHz))
-		self.plot_buffer['spec_freqs'] = np.copy(spec_freqs)
+		self.plot_buffer['spec_freqs'][self.currentChannel] = np.copy(spec_freqs)
 
 		#self.plot_buffer['spectrogram'][:,:-1] = self.plot_buffer['spectrogram'][:,1:]
 		self.plot_buffer['spectrogram'][self.currentChannel] = np.roll(self.plot_buffer['spectrogram'][self.currentChannel],-1,0)
 		spec_PSDperBin = spectrum_PSDperHz * 250.0 / float(NFFT)
 		self.plot_buffer['spectrogram'][self.currentChannel][-1:] = 10*np.log10(spec_PSDperBin).reshape(-1)
+		self.plot_buffer['spectrum'][self.currentChannel] = 10*np.log10(spec_PSDperBin).reshape(-1)
+		self.record_buffer['EYE_BLINK'][self.currentChannel].append((self.plot_buffer['spectrogram'][self.currentChannel][-1], self.actionVariables['EYE_BLINK']))
+
+		self.plot_buffer['spectrogram_last'][self.currentChannel][-1] = 10*np.log10(spec_PSDperBin).reshape(-1)
 		self.spec_True[self.currentChannel] = 1
 
 	def process_raw(self,channels=[0],meth='live'):
