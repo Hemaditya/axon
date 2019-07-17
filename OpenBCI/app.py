@@ -101,13 +101,18 @@ class DataStream():
 
 			self.record_buffer['EYE_BLINK'][i] = [np.zeros(self.NFFT/2+1)]
 
-	def read_chunk(self,n_chunks=1):
+	def read_chunk(self,ck=None,n_chunks=1):
 		# n_chunks = number of chunks to read. Keep it 1 for live data
+		temp = self.chunk_size
+		if ck == None:
+			pass
+		else:
+			self.chunk_size = ck
 		all_chunks = []
 		for i in range(n_chunks):
 			k = self.stream.start_stream(self.chunk_size) 
-			self.csvfile.writerow(k)
 			all_chunks.append(k)
+		self.chunk_size = temp
 		self.data_buffer = np.array(all_chunks)*self.uVolts_per_count
 		#self.plot_buffer['raw_data'] = self.data_buffer
 
