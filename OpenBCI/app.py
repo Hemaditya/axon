@@ -33,9 +33,10 @@ class DataStream():
 		self.daisy = daisy
 		self.actionVariables = {}
 		self.actionVariables['EYE_BLINK'] = 0
-		self.file = open('16July_data','w')
-		self.csvfile = csv.writer(self.file)
+		self.file = ""
+		#self.csvfile = csv.writer(self.file)
 		self.Zstate = {}
+		self.currentChannel = 0
 		self.Zstate['notch'] = {}
 		self.Zstate['dc_offset'] = {}
 		self.Zstate['bandpass'] = {}
@@ -124,9 +125,12 @@ class DataStream():
 				self.port = '/dev/'+obj.group()
 
 
-	def notch_filter(self):
+	def notch_filter(self,channel=None):
 		# This is to remove the AC mains noise interference	of frequency of 50Hz(India)
 		notch_freq_Hz = np.array([50.0])  # main + harmonic frequencies
+		temp = self.currentChannel
+		if(channel != None):
+			self.currentChannel = channel
 		for freq_Hz in np.nditer(notch_freq_Hz):  # loop over each target freq
 			bp_stop_Hz = freq_Hz + 3.0*np.array([-1, 1])  # set the stop band
 			b, a = signal.butter(3, bp_stop_Hz/(250 / 2.0), 'bandstop')
@@ -140,6 +144,7 @@ class DataStream():
 			self.filter_outputs['notch_filter'][self.currentChannel][-self.window_size:] = notchOutput
 			self.plot_buffer['notch_filter'][self.currentChannel][:-self.window_size] = self.plot_buffer['notch_filter'][self.currentChannel][self.window_size:]
 			self.plot_buffer['notch_filter'][self.currentChannel][-self.window_size:] = notchOutput
+		self.currentChannel = temp
 
 	def bandpass(self):
 		# This is to allow the band of signal to pass with start frequency and stop frequency
@@ -156,10 +161,15 @@ class DataStream():
 		self.plot_buffer['bandpass'][self.currentChannel][:-self.window_size] = self.plot_buffer['bandpass'][self.currentChannel][self.window_size:]
 		self.plot_buffer['bandpass'][self.currentChannel][-self.window_size:] = bandpassOutput
 
-	def remove_dc_offset(self):
+	def remove_dc_offset(self,channel=None):
 	# This is to Remove The DC Offset By Using High Pass Filters
 		hp_cutoff_Hz = 1.0 # cuttoff freq of 1 Hz (from 0-1Hz all the freqs at attenuated)
 		b, a = signal.butter(2, hp_cutoff_Hz/(250 / 2.0), 'highpass')
+		temp = self.currentChannel
+		if(channel != None):
+			self.currentChannel = channel
+
+			
 		dcOutput, self.Zstate['dc_offset'][self.currentChannel] = signal.lfilter(b, a, self.raw_buffer[self.currentChannel], zi=self.Zstate['dc_offset'][self.currentChannel])[-self.window_size:]
 		self.filter_outputs['dc_offset'][self.currentChannel][:-self.window_size] = self.filter_outputs['dc_offset'][self.currentChannel][self.window_size:]
 		self.filter_outputs['dc_offset'][self.currentChannel][-self.window_size:] = dcOutput
