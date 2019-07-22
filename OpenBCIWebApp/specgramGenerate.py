@@ -1,0 +1,2 @@
+blinkPath = "BlinkData/"
+nbPath = "NBData/"

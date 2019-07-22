@@ -1,6 +1,6 @@
 import sys
-sys.path.append('../OpenBCI/')
 import app
+from matplotlib.pyplot import cla
 import pickle
 import numpy as np
 import json
@@ -67,16 +67,17 @@ class BCIWebApp(app.DataStream):
 		return obj
 	
 
-	def recordEyeBlinkSession(self,iterations,obj):
-		path = obj['dir']+'EYE_BLINK/'
-		if os.path.exists(path) == False:
-			os.mkdir(path)
-		else:
-			pass
+	def recordEyeBlinkSession(self,iterations,obj=None):
+		if(obj != None):
+			path = obj['dir']+'EYE_BLINK/'
+			if os.path.exists(path) == False:
+				os.mkdir(path)
+			else:
+				pass
 
-		timestr = time.strftime("%d%m%Y-%H%M%S")
-		path = path+timestr+"/"
-		os.mkdir(path)
+			timestr = time.strftime("%d%m%Y-%H%M%S")
+			path = path+timestr+"/"
+			os.mkdir(path)
 
 		dataBuffer = []
 		print("Wait 3 seconds")
@@ -93,6 +94,8 @@ class BCIWebApp(app.DataStream):
 			self.read_chunk()	
 			dataBuffer.append(self.data_buffer)	
 		dataBuffer = np.squeeze(np.array(dataBuffer))
+		if(obj == None):
+			return dataBuffer
 		np.save(path+"rawData",dataBuffer)
 		self.lastSession = path
 
@@ -104,7 +107,8 @@ class BCIWebApp(app.DataStream):
 		#if(m > self.max):
 		#	self.max = m
 		#fftOutput = fftOutput/self.max
-		return np.square(fftOutput)/np.sum(np.square(fftOutput))
+		#return np.square(fftOutput)/np.sum(np.square(fftOutput))
+		return fftOutput/25000.0
 
 	def seperateBands(self,fftOutput,NFFT=250):
 		x = np.fft.rfftfreq(250) * 250.0
@@ -115,18 +119,16 @@ class BCIWebApp(app.DataStream):
 		gamma = np.sum(fftOutput[np.where(np.logical_and(x>=30,x<=45))])
 		
 		bandValues = np.array([delta,theta,alpha,beta,gamma])
+		print(bandValues)
 		#plt.plot(delta)
 		#plt.plot(theta)
 		#plt.plot(alpha)
 		#plt.plot(beta)
 		#plt.plot(gamma)
 		#plt.show()
-
-		#path = obj['dir']+"EYE_BLINK/"+"fftOutput"
-		#np.save(path,bandValues)
-
-		print(bandValues)
-	
+		
+		return bandValues
+			
 	def notchFilter(self,arr,state):
 		# This is to remove the AC mains noise interference	of frequency of 50Hz(India)
 		notch_freq_Hz = np.array([50.0])  # main + harmonic frequencies
@@ -144,35 +146,39 @@ class BCIWebApp(app.DataStream):
 		return dcOutput, state
 		
 
-	def applyFilters(self, session=None,Data=None):
+	def applyFilters(self, session=None,Data=None,r=False):
 		# Here since the data being loaded is for an entire 
 		if(session != None):
 			data = np.load(self.lastSession+"/rawData"+".npy")
-			notchFilterOutput = []
-			dcOffsetOutput = []
-			Zstate = {}
-			Zstate['notch'] = {}
-			Zstate['dc_offset'] = {}
-			for c in range(self.n_channels):
-				Zstate['notch'][c] = [0,0,0,0,0,0]
-				Zstate['dc_offset'][c] = [0,0]
-				dcOutputPerChannel = []
-				notchOutputPerChannel = []
-				for	i in range(data.shape[0]):
-					rawData = data[i,:,c].reshape(-1)
-					dcOutput, Zstate['dc_offset'][c] = self.removeDCOffset(rawData,Zstate['dc_offset'][c])
-					dcOutputPerChannel.append(dcOutput)
-					notchOutput, Zstate['notch'][c]  = self.notchFilter(dcOutput,Zstate['notch'][c])
-					notchOutputPerChannel.append(notchOutput)
-				notchFilterOutput.append(notchOutputPerChannel)	
-				dcOffsetOutput.append(dcOutputPerChannel)
-			notchFilterOutput = np.array(notchFilterOutput)
-			dcOffsetOutput = np.array(dcOffsetOutput)
-			print(notchFilterOutput.shape)
-			print(dcOffsetOutput.shape)
-			np.save(self.lastSession+"notchFilterOutput",notchFilterOutput)
-			np.save(self.lastSession+"dcOffsetOutput",dcOffsetOutput)
-
+		else:
+			data = Data
+		notchFilterOutput = []
+		dcOffsetOutput = []
+		Zstate = {}
+		Zstate['notch'] = {}
+		Zstate['dc_offset'] = {}
+		for c in range(self.n_channels):
+			Zstate['notch'][c] = [0,0,0,0,0,0]
+			Zstate['dc_offset'][c] = [0,0]
+			dcOutputPerChannel = []
+			notchOutputPerChannel = []
+			for	i in range(data.shape[0]):
+				rawData = data[i,:,c].reshape(-1)
+				dcOutput, Zstate['dc_offset'][c] = self.removeDCOffset(rawData,Zstate['dc_offset'][c])
+				dcOutputPerChannel.append(dcOutput)
+				notchOutput, Zstate['notch'][c]  = self.notchFilter(dcOutput,Zstate['notch'][c])
+				notchOutputPerChannel.append(notchOutput)
+			notchFilterOutput.append(notchOutputPerChannel)	
+			dcOffsetOutput.append(dcOutputPerChannel)
+		notchFilterOutput = np.array(notchFilterOutput)
+		dcOffsetOutput = np.array(dcOffsetOutput)
+		if(r==True):
+			return(notchFilterOutput, dcOffsetOutput)
+		print(notchFilterOutput.shape)
+		print(dcOffsetOutput.shape)
+		np.save(self.lastSession+"notchFilterOutput",notchFilterOutput)
+		np.save(self.lastSession+"dcOffsetOutput",dcOffsetOutput)
+			
 
 	def plotData(self,session=None,Data=None,channel=0,dataType="rawData"):
 		if(session != None):
@@ -211,10 +217,30 @@ class BCIWebApp(app.DataStream):
 		self.applyFilters(True)
 
 		notchData = np.load(self.lastSession+"notchFilterOutput.npy")[0]
+		fftData = []
 		for each in notchData:
 			fftOutput = self.pureFFT(each)	
-			self.seperateBands(fftOutput)
-			
+			fftData.append(self.seperateBands(fftOutput))
+		fftData = np.array(fftData[1:])
+		#print(fftData.shape)
+		plt.ion()
+		plt.show()
+		
+		#plt.plot(fftData[:,0])
+		plt.plot(fftData[:,1])
+		#plt.plot(fftData[:,2])
+		#plt.plot(fftData[:,3])
+		#plt.plot(fftData[:,4])
+		plt.draw()
+
+
+		timestr = time.strftime("%Y%m%d_%H%M%S")
+		newPath = "./FFT/"+timestr
+		x = raw_input("Do you want to save data: ")
+		if(x == 'y'):
+			np.save(newPath,fftData)	
+		else:
+			pass
 
 		if(plot == True):
 			self.plotData(True,dataType="notchFilterOutput")
@@ -222,7 +248,7 @@ class BCIWebApp(app.DataStream):
 def checkElectrodeConnectivity(x):
 	i = 0
 	while(True):
-		x.read_chunk(ck=50)
+		_ = x.read_chunk(ck=50)
 		conn = x.check_electrode_connectivity()
 		if(conn.all() == True):
 			i = i+1
@@ -234,6 +260,173 @@ def checkElectrodeConnectivity(x):
 		if(i >= 15):
 			break
 
+
+blinkPath = "completeNewSession/BLINK_DATA/"
+nbPath = "completeNewSession/NB_DATA/"
+ImageBlinkPath = "ImageData/BLINK_DATA/"
+ImageNbPath = "ImageData/NB_DATA/"
+
+def startDataCollection(x,iterations=60,localData=False,uniform=False):
+	plt.ion()
+	plt.show()
+	plt.hold(False)
+	timestr = time.strftime("%Y%m%d_%H%M%S")
+	path = timestr+"-"+"notchOutput"
+
+	if localData == False:
+		rawData = x.recordEyeBlinkSession(iterations,obj=None)
+		nO,dO = x.applyFilters(Data=rawData,r=True)
+
+		if(uniform == True):
+			for i in range(iterations):
+				plt.plot(nO[0,i,:].reshape(-1))
+				plt.draw()	
+				x = raw_input("Enter choice: ")
+				if(x.lower() == 'y'):
+					np.save(blinkPath+path+"-"+str(i),nO[:,i,:])
+					plt.savefig(ImageBlinkPath+path+str(i)+".png")
+				elif(x.lower() == 'n'):
+					np.save(nbPath+path+"-"+str(i),nO[:,i,:])
+					plt.savefig(ImageNbPath+path+str(i)+".png")
+				plt.clf()
+
+		else:
+			fig, (ax1,ax2) = plt.subplots(2,1)
+			nData = nO[0,:,:].reshape(-1)
+			ax1.plot(nData)
+			plt.draw()
+			print(nData)
+			x1 = 0
+			x2 = 0
+			eyeBlinkData = []
+			nbData = []
+			k = None
+			#plt.clf()
+			while(k != 'q'):
+				ax1.plot(nData)
+				plt.draw()
+				k = raw_input("Enter (y/n/d/q): ")
+				if(k == 'q'):
+					break
+				elif(k == 'd'):
+					continue
+				elif(k == 'y'):
+					x1,x2 = map(int,raw_input("Enter two points: ").split())
+					ax1.axvline(x=x1)
+					ax1.axvline(x=x2)
+					ax2.plot(nData[x1:x2+1])
+					plt.draw()
+
+					k = raw_input("Confirm: ")
+					if(k == 'n'):
+						plt.cla()
+						continue
+					eyeBlinkData.append(nData[x1:x2+1])
+					nData = np.delete(nData,np.array(range(x1,x2+1)))
+					ts = time.strftime("%Y%m%d_%H%M%S")
+					ja = ts+"-"+"notchOutput"
+					plt.savefig(ImageBlinkPath+ja+".png")
+
+				elif(k == 'n'):
+					x1,x2 = map(int,raw_input("Enter two points: ").split())
+					ax1.axvline(x=x1)
+					ax1.axvline(x=x2)
+					ax2.plot(nData[x1:x2+1])
+					plt.draw()
+					k = raw_input("Confirm: ")
+					if(k == 'n'):
+						plt.cla()
+						continue
+					nbData.append(nData[x1:x2+1])
+					np.delete(nData,np.array(range(x1,x2+1)))
+					ts = time.strftime("%Y%m%d_%H%M%S")
+					ja = ts+"-"+"notchOutput"
+					plt.savefig(ImageNbPath+ja+".png")
+					
+				plt.cla()
+			
+			np.save(blinkPath+path,np.array(eyeBlinkData))
+			np.save(nbPath+path,np.array(nbData))
+
+	else:
+		folder = "RandomSessions/EYE_BLINK/"
+		dirs = os.listdir(folder)
+		for d in dirs:
+			files = os.listdir(folder+d+"/")
+			for f in files:
+				if "notch" in f:
+					nO = np.load(folder+d+"/"+f)
+					iterations = nO.shape[1]
+					for i in range(iterations):
+						plt.plot(nO[0,i,:].reshape(-1))
+						plt.draw()	
+						x = raw_input("Enter choice: ")
+						if(x.lower() == 'y'):
+							np.save(blinkPath+path+"-"+str(i),nO[:,i,:])
+							plt.savefig(ImageBlinkPath+path+str(i)+".png")
+						elif(x.lower() == 'n'):
+							np.save(nbPath+path+"-"+str(i),nO[:,i,:])
+							plt.savefig(ImageNbPath+path+str(i)+".png")
+						else:
+							#Discard
+							pass
+						plt.clf()
+
+	#	else:
+	#		fig, (ax1,ax2) = plt.subplots(2,1)
+	#		nData = nO[0,:,:].reshape(-1)
+	#		x1 = 0
+	#		x2 = 0
+	#		eyeBlinkData = []
+	#		nbData = []
+	#		k = None
+	#		while(k != 'q'):
+	#			ax1.plot(nData)
+	#			plt.draw()
+	#			k = raw_input("Enter (y/n/d/q): ")
+	#			if(k == q):
+	#				break
+	#			elif(k == 'd'):
+	#				continue
+	#			elif(k == 'y'):
+	#				x1,x2 = map(int,raw_input("Enter two points: ").split())
+	#				ax1.axvline(x=x1)
+	#				ax1.axvline(x=x2)
+	#				ax2.plot(nData[x1:x2+1])
+	#				plt.draw()
+
+	#				k = raw_input("Confirm: ")
+	#				if(k == 'n'):
+	#					continue
+	#				eyeBlinkData.append(nData[x1:x2+1])
+	#					np.delete(nData,np.array(range(x1,x2+1)))
+	#				ts = time.strftime("%Y%m%d_%H%M%S")
+	#				ja = ts+"-"+"notchOutput"
+	#				plt.savefig(ImageBlinkPath+ja+".png")
+
+	#			elif(k == 'n'):
+	#				x1,x2 = map(int,raw_input("Enter two points: ").split())
+	#				ax1.axvline(x=x1)
+	#				ax1.axvline(x=x2)
+	#				ax2.plot(nData[x1:x2+1])
+	#				plt.draw()
+	#				k = raw_input("Confirm: ")
+	#				if(k == 'n'):
+	#					continue
+	#				nbData.append(nData[x1:x2+1])
+	#					np.delete(nData,np.array(range(x1,x2+1)))
+	#				ts = time.strftime("%Y%m%d_%H%M%S")
+	#				ja = ts+"-"+"notchOutput"
+	#				plt.savefig(ImageNbPath+ja+".png")
+	#				
+	#		
+	#		
+	#		np.save(blinkPath+path,np.array(eyeBlinkData))
+	#		np.save(nbPath+path,np.array(nbData))
+			
+			
+
+
 x = BCIWebApp(chunk_size=250)
 if(os.path.exists('UserInformation.pickle')):
 	pass
@@ -244,6 +437,7 @@ else:
 
 #checkElectrodeConnectivity(x)
 print("Starting the session in 5 seconds")
-time.sleep(5)
-x.start_session(iterations=10,plot=False,randomData=True)
+#time.sleep(5)
+#x.start_session(iterations=10,plot=False,randomData=True)
+startDataCollection(x,iterations=10,uniform=False)
 os._exit(0)

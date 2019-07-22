@@ -13,7 +13,7 @@ import math
 a = QtGui.QApplication([])
 # Channels to be plotted
 # if only one channel to be plotted , channels = [0]
-channels = [0]
+channels = [6]
 #pos = np.array([0., 1., 0.5, 0.25, 0.75])
 #color = np.array([[0,255,255,255], [255,255,0,255], [0,0,0,255], (0, 0, 255, 255), (255, 0, 0, 255)], dtype=np.ubyte)
 pos = np.arange(0,1,1/256.0)
@@ -26,7 +26,7 @@ gb_windows = []
 # mode = 1, plot bandpassA
 # mode = 0, plot spectrogram
 # mode = 2, spectrum plot
-mode = 1
+mode = 0
 all_plots = []
 all_curves = []
 all_windows = []
@@ -98,7 +98,7 @@ if mode == 1 or mode == 2:
 
 
 # Initialize the processing stream
-appObj = app.DataStream(chunk_size=125,b_times=1,spec_analyse=1,spectrogramWindow=100,NFFT=256)
+appObj = app.DataStream(chunk_size=250,b_times=1,spec_analyse=1,spectrogramWindow=100,NFFT=256)
 # The below function will be run by thread t1
 def runApp(count=None):
 	if(count == None):
@@ -149,18 +149,16 @@ def update():
 			all_curves[i].setData(appObj.plot_buffer['notch_filter'][i])
 
 	if(mode == 0):
-		for i in channels:
-			if(appObj.spec_True[i] == 1):
-				print(appObj.plot_buffer['spec_freqs'][i].shape)
-				all_items[i].setImage(appObj.plot_buffer['spectrogram_last'][i],autoLevels=False)
-				appObj.spec_True[i] = 0
-		pass
+			for j,i in enumerate(channels):
+				if(appObj.spec_True[i] == 1):
+					all_items[j].setImage(appObj.plot_buffer['spectrogram'][i],autoLevels=False)
+					appObj.spec_True[i] = 0
 	
 # PyQTgraph initialization
 
 timer = QtCore.QTimer()
 timer.timeout.connect(update)
-timer.start(500)
+timer.start(50)
 
 if __name__ == '__main__':
 	import sys

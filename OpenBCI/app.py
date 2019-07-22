@@ -148,8 +148,8 @@ class DataStream():
 
 	def bandpass(self):
 		# This is to allow the band of signal to pass with start frequency and stop frequency
-		start = 1
-		stop = 60
+		start = 3
+		stop = 30
 		self.prevDC = [0,0]
 		bp_Hz = np.zeros(0)
 		bp_Hz = np.array([start,stop])
@@ -225,10 +225,10 @@ class DataStream():
 				#apply bandpass
 				self.bandpass()
 				# handle spec analyser
-				self.filter_outputs['spec_analyser'][self.currentChannel] = np.append(self.filter_outputs['spec_analyser'][self.currentChannel], self.filter_outputs['notch_filter'][self.currentChannel][-self.window_size:])
+				self.filter_outputs['spec_analyser'][self.currentChannel] = np.append(self.filter_outputs['spec_analyser'][self.currentChannel], self.filter_outputs['bandpass'][self.currentChannel][-self.window_size:])
 				if(self.filter_outputs['spec_analyser'][self.currentChannel].reshape(-1).shape[0] == self.window_size*self.spec_analyse):
-					#self.get_spectrum_data()
-					self.pure_fft()
+					self.get_spectrum_data()
+					#self.pure_fft()
 					self.filter_outputs['spec_analyser'][self.currentChannel] = np.array([])
 						
 
