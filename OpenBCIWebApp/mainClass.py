@@ -8,6 +8,7 @@ import os
 import time
 import matplotlib.pyplot as plt
 from scipy import signal
+import learner
 
 class BCIWebApp(app.DataStream):
 	
@@ -19,6 +20,7 @@ class BCIWebApp(app.DataStream):
 		self.randomSessions = "RandomSessions/"
 		self.userInfoFile = "UserInformation.pickle"
 		self.lastSession = ""
+		self.LState = {}
 
 
 	def check_electrode_connectivity(self):
@@ -87,9 +89,11 @@ class BCIWebApp(app.DataStream):
 		j = 0
 		for i in range(iterations):
 			if(i >= iterations/2):
-				print("BLINK PLEASE!!!!!!!!!")
+				#print("BLINK PLEASE!!!!!!!!!")
+				pass
 			else:
-				print("DONT BLINK!!!!!!!!!!!!")
+				#print("DONT BLINK!!!!!!!!!!!!")
+				pass
 			j = (j+1)%5
 			self.read_chunk()	
 			dataBuffer.append(self.data_buffer)	
@@ -99,7 +103,7 @@ class BCIWebApp(app.DataStream):
 		np.save(path+"rawData",dataBuffer)
 		self.lastSession = path
 
-	#def normalization(self,
+		#def normalization(self,
 
 	def pureFFT(self,arr,NFFT=256):
 		fftOutput = abs(np.fft.rfft(arr))
@@ -217,33 +221,34 @@ class BCIWebApp(app.DataStream):
 		self.applyFilters(True)
 
 		notchData = np.load(self.lastSession+"notchFilterOutput.npy")[0]
-		fftData = []
-		for each in notchData:
-			fftOutput = self.pureFFT(each)	
-			fftData.append(self.seperateBands(fftOutput))
-		fftData = np.array(fftData[1:])
-		#print(fftData.shape)
-		plt.ion()
-		plt.show()
-		
-		#plt.plot(fftData[:,0])
-		plt.plot(fftData[:,1])
-		#plt.plot(fftData[:,2])
-		#plt.plot(fftData[:,3])
-		#plt.plot(fftData[:,4])
-		plt.draw()
+		print(notchData.shape)
+		#fftData = []
+		#for each in notchData:
+		#	fftOutput = self.pureFFT(each)	
+		#	fftData.append(self.seperateBands(fftOutput))
+		#fftData = np.array(fftData[1:])
+		##print(fftData.shape)
+		#plt.ion()
+		#plt.show()
+		#
+		##plt.plot(fftData[:,0])
+		#plt.plot(fftData[:,1])
+		##plt.plot(fftData[:,2])
+		##plt.plot(fftData[:,3])
+		##plt.plot(fftData[:,4])
+		#plt.draw()
 
 
-		timestr = time.strftime("%Y%m%d_%H%M%S")
-		newPath = "./FFT/"+timestr
-		x = raw_input("Do you want to save data: ")
-		if(x == 'y'):
-			np.save(newPath,fftData)	
-		else:
-			pass
+		#timestr = time.strftime("%Y%m%d_%H%M%S")
+		#newPath = "./FFT/"+timestr
+		#x = raw_input("Do you want to save data: ")
+		#if(x == 'y'):
+		#	np.save(newPath,fftData)	
+		#else:
+		#	pass
 
-		if(plot == True):
-			self.plotData(True,dataType="notchFilterOutput")
+		#if(plot == True):
+		#	self.plotData(True,dataType="notchFilterOutput")
 
 def checkElectrodeConnectivity(x):
 	i = 0
@@ -438,6 +443,6 @@ else:
 #checkElectrodeConnectivity(x)
 print("Starting the session in 5 seconds")
 #time.sleep(5)
-#x.start_session(iterations=10,plot=False,randomData=True)
-startDataCollection(x,iterations=10,uniform=False)
+x.start_session(iterations=10,plot=False,randomData=True)
+#startDataCollection(x,iterations=10,uniform=False)
 os._exit(0)

@@ -25,7 +25,7 @@ class DataStream():
 	channels = future use
 	spectrogramWindow = buffer size for spectrogram
 	'''
-	def __init__(self,port=None,daisy=False,chunk_size=250,b_times=32,n_channels=8,spec_analyse=3, NFFT=512, filters=None, channels='all', spectrogramWindow=1000):
+	def __init__(self,port=None,daisy=False,chunk_size=250,b_times=1,n_channels=8,spec_analyse=3, NFFT=512, filters=None, channels='all', spectrogramWindow=1000):
 		if(port == None):
 			self.get_port()
 		else:
